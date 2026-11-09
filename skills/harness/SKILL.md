@@ -50,6 +50,7 @@ description: "프로젝트에 맞는 하네스를 설계하고, 전문 에이전
 4. 0단계에서 확인한 기존 에이전트·스킬과 겹치거나 충돌하는 부분을 찾는다.
 5. 코드베이스를 살펴 기술 스택, 데이터 모델, 주요 모듈을 파악한다.
 6. 사용자가 쓰는 용어와 질문 수준을 보고 설명의 난이도를 맞춘다. 코딩 경험이 적은 사용자에게 검증 조건(assertion), JSON 스키마(JSON Schema) 같은 용어를 설명 없이 쓰지 않는다.
+7. (로컬 추가) 운영 틀을 확인한다: 최종 산출물을 무엇으로 판정하는가, 사용자에게 물을 일과 메인이 정할 일은 무엇인가, 되돌리기 어려운 일은 무엇인가. 답과 설계 방법은 `references/project-governance.md` 1\~3절을 따르고, 2단계에서 승인 지점과 보호 장치를 오케스트레이터에 적는다. 세션 여러 개, worktree, 외부 worker를 쓰는 환경이면 `references/parallel-sessions.md`도 읽는다.
 
 ### 2단계: 실행 모드와 팀 구조 설계
 
@@ -254,6 +255,7 @@ Claude는 스킬의 `name`과 `description`을 보고 어떤 스킬을 불러올
 - 작업 디렉터리 아래 `_workspace/`에 중간 산출물을 저장한다.
 - 파일 이름은 `{phase}_{agent}_{artifact}.{ext}` 형식을 쓴다. 예: `01_analyst_requirements.md`
 - 최종 산출물만 사용자가 지정한 경로에 저장한다. `_workspace/`는 사후 검증을 위해 남긴다.
+- (로컬 추가) 원본 데이터에서 나온 내용의 구분, worktree와의 관계, 종료 때 처리는 `references/project-governance.md` 6절을 따른다.
 
 #### 5-2. 오류 처리
 
@@ -296,6 +298,8 @@ Claude는 스킬의 `name`과 `description`을 보고 어떤 스킬을 불러올
 ````
 
 에이전트·스킬 목록, 디렉터리 구조, 자세한 실행 규칙은 넣지 않는다. 이 정보는 오케스트레이터 스킬과 `.claude/agents/`, `.claude/skills/`에서 관리한다. `CLAUDE.md`에는 호출 조건과 변경 이력만 둔다.
+
+(로컬 추가) 변경 이력이 열 건을 넘으면 표를 결정 하나에 파일 하나로 옮기고 `CLAUDE.md`에는 위치만 남긴다. 형식과 삭제 조건은 `references/project-governance.md` 4절을 따른다.
 
 #### 5-5. 후속 요청 처리
 
@@ -373,6 +377,10 @@ Claude는 스킬의 `name`과 `description`을 보고 어떤 스킬을 불러올
 - 에이전트가 같은 원인으로 반복해서 실패한다.
 - 사용자가 오케스트레이터를 거치지 않고 같은 작업을 계속 수동으로 처리한다.
 
+### 8단계: 종료 (로컬 추가)
+
+프로젝트를 마칠 때 회고, 가져갈 것과 두고 갈 것의 구분, 다시 만들 수 없는 산출물 보관, `_workspace/` 처리, 병행 세션 정리를 한다. 절차는 `references/project-governance.md` 7절이다. 하네스 회고는 다음 프로젝트에서 이 스킬을 부를 때 입력으로 쓴다.
+
 ## 산출물 점검표
 
 - [ ] `프로젝트/.claude/agents/`에 재사용할 모든 사용자 정의 유형의 파일을 만들었다. 단발 작업에 기본 제공 유형을 그대로 쓰는 경우는 제외했다.
@@ -391,6 +399,7 @@ Claude는 스킬의 `name`과 `description`을 보고 어떤 스킬을 불러올
 - [ ] 스킬을 불러와야 하는 요청과 불러오면 안 되는 경계 사례로 호출 조건을 검증했다.
 - [ ] `CLAUDE.md`에 호출 조건과 변경 이력만 기록했다.
 - [ ] 오케스트레이터의 0단계에서 처음 실행, 후속 실행, 일부 재실행을 구분한다. 워크플로는 재개 옵션도 다룬다.
+- [ ] (로컬 추가) 판정 방법, 승인 지점, 보호 장치를 정해 오케스트레이터에 적었다(`references/project-governance.md`).
 
 ## 참고 문서
 
@@ -403,3 +412,5 @@ Claude는 스킬의 `name`과 `description`을 보고 어떤 스킬을 불러올
 - **스킬 작성 가이드**: `references/skill-writing-guide.md`
 - **스킬 테스트 가이드**: `references/skill-testing-guide.md`
 - **QA 에이전트 가이드**: `references/qa-agent-guide.md`
+- **(로컬 추가) 운영 틀 설계**: `references/project-governance.md`
+- **(로컬 추가) 병행 세션·worktree·외부 worker**: `references/parallel-sessions.md`
