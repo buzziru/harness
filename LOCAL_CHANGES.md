@@ -32,6 +32,7 @@
 | 종료 단계 | `harness` 8단계, governance 7절 | meet-rag: 2026-11-09 완료 작업 | 가설 |
 | PR 코멘트와 대기 목록을 evolve 입력으로 | `evolve` Phase 1의 5·6 | meet-rag: 스킬 F3 | 가설 |
 | 반영 전 관문(관찰 상태, 이미 있는 규칙의 위치 고치기, 고치거나 지울 기존 문장), 묶음 반영 | `evolve` Phase 3 관문, 원칙, `harness` 5-4(호출 조건)·7단계 2 | meet-rag: 하네스 chore PR 78/247. portfolio: 2.4(하네스 PR 11/16), #29·#44(규칙을 장치로 강제) | 문제 재확인(meet-rag, portfolio) |
+| 규칙의 목적으로 판정(예외로 끝내기, 목적 위반과 형식 지적 구분) | `evolve` Phase 3 관문 (0)·원칙, `references/qa-agent-guide.md` 3-5 | portfolio 2026-11-12: 프로필 두 줄 → 전체 줄바꿈 규칙·격자 변경 제안(되돌림, 결정 0113), paired bootstrap 풀이를 '첫 등장' 규칙대로 레일 태그에, meeting-rag 조건 낱말 한 줄로 C4 round3\~7 | 가설 |
 | 운영 틀 질문을 구축 관문으로(1\~5절 답을 결정 기록으로) | `harness` 1단계 7, 2단계 머리, 점검표, governance 2·3·5절 질문 | portfolio: 2.6(B 12건 가운데 8건이 governance 1\~5절의 질문) | 가설 |
 | 공유 규칙은 한 곳에 두고 나머지는 경로만, 정본이 바뀌면 하네스 파일까지 grep | `harness` 4-5, `references/skill-writing-guide.md` 8절, `evolve` Phase 3의 6 | portfolio: 2.2(#8·#18·#20·#21·#34·#41, 연결 누락과 옛 참조 정리), 감사 뒤 같은 정리 3회(점검 항목에 옛 규칙이 남음) | 가설(portfolio 안 재발 3회) |
 | 메인이 직접 고칠 경계를 크기가 아니라 종류로 | governance 2절 | portfolio: #26·#38, 2.3 | 가설 |
