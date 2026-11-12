@@ -32,13 +32,14 @@
 | 종료 단계 | `harness` 8단계, governance 7절 | meet-rag: 2026-11-09 완료 작업 | 가설 |
 | PR 코멘트와 대기 목록을 evolve 입력으로 | `evolve` Phase 1의 5·6 | meet-rag: 스킬 F3 | 가설 |
 | 반영 전 관문(관찰 상태, 이미 있는 규칙의 위치 고치기, 고치거나 지울 기존 문장), 묶음 반영 | `evolve` Phase 3 관문, 원칙, `harness` 5-4(호출 조건)·7단계 2 | meet-rag: 하네스 chore PR 78/247. portfolio: 2.4(하네스 PR 11/16), #29·#44(규칙을 장치로 강제) | 문제 재확인(meet-rag, portfolio) |
+| 규칙의 목적으로 판정(예외로 끝내기, 목적 위반과 형식 지적 구분) | `evolve` Phase 3 관문 (0)·원칙, `references/qa-agent-guide.md` 3-5 | portfolio 2026-11-12: 프로필 두 줄 → 전체 줄바꿈 규칙·격자 변경 제안(되돌림, 결정 0113), paired bootstrap 풀이를 '첫 등장' 규칙대로 레일 태그에, meeting-rag 조건 낱말 한 줄로 C4 round3\~7 | 가설 |
 | 운영 틀 질문을 구축 관문으로(1\~5절 답을 결정 기록으로) | `harness` 1단계 7, 2단계 머리, 점검표, governance 2·3·5절 질문 | portfolio: 2.6(B 12건 가운데 8건이 governance 1\~5절의 질문) | 가설 |
 | 공유 규칙은 한 곳에 두고 나머지는 경로만, 정본이 바뀌면 하네스 파일까지 grep | `harness` 4-5, `references/skill-writing-guide.md` 8절, `evolve` Phase 3의 6 | portfolio: 2.2(#8·#18·#20·#21·#34·#41, 연결 누락과 옛 참조 정리), 감사 뒤 같은 정리 3회(점검 항목에 옛 규칙이 남음) | 가설(portfolio 안 재발 3회) |
 | 메인이 직접 고칠 경계를 크기가 아니라 종류로 | governance 2절 | portfolio: #26·#38, 2.3 | 가설 |
 | 저장소 밖 파일·서비스 수정을 보호 대상에 | governance 3절 | portfolio: #42 | 가설 |
 | 화면·실행 결과로 판단할 산출물은 결과를 보고 승인, 렌더 여부 표시 | governance 5절 첫 문단 | portfolio: #39, 5절(화면을 보기 전에 결정을 요구한 곳), 결정 0050 | 가설 |
 | PR 범위와 새로 나온 일의 기본값 | governance 5절 | portfolio: #8·#27·#36, 2.4 | 가설 |
-| 병행 세션, worktree, 외부 worker | `references/parallel-sessions.md` | meet-rag: ADR-0058, 0098, 0105, 0107. portfolio: 결정 0075(외부 worker 후보 찾기, 권한 요청), 2026-11-12 하위 세션 운용, 결정 0085(결정 번호를 브랜치 낼 때 공유 기록에 예약, 그 뒤 0085\~0096 겹침 없음), 창 재사용(`/clear`, `/exit` 뒤 재시작)과 Windows 입력(`MSYS_NO_PATHCONV=1`, PowerShell `;`)은 portfolio 메모리·넘김 문서 | 문제 재확인(meet-rag, portfolio, 환경 한정) |
+| 병행 세션, worktree, 외부 worker | `references/parallel-sessions.md` | meet-rag: ADR-0058, 0098, 0105, 0107. portfolio: 결정 0075(외부 worker 후보 찾기, 권한 요청), 2026-11-12 하위 세션 운용, 결정 0085(결정 번호를 브랜치 낼 때 공유 기록에 예약, 그 뒤 0085\~0096 겹침 없음), 결정 0112(worker 먼저), 하위 세션 결과 반영을 메인이 직접 함(2026-11-12), 창 재사용(`/clear`, `/exit` 뒤 재시작)과 Windows 입력(`MSYS_NO_PATHCONV=1`, PowerShell `;`)은 portfolio 메모리·넘김 문서 | 문제 재확인(meet-rag, portfolio, 환경 한정) |
 | 질문 형식(무엇·왜·선택지별 차이·추천, 결정은 내용으로) | governance 2절 | portfolio: 결정 0082(결정 번호만 댄 질문에 사용자가 되물음, 사용자 기억과 기록이 다름). 2026-11-12 같은 날 차이 점검 질문 네 개가 이 형식으로 나갔고 되물음 기록 없음(하루치라 효과 확인 아님) | 가설 |
 | git·PR 흐름을 선택으로, 정할 항목과 기본 프리셋 | `references/git-pr-flow.md`, `harness` 1단계 7·8단계 | portfolio: 결정 0005·0012·0014·0015·0032·0054·0055·0060, 감사 0절(첫 27시간 PR 16개 중 11개가 하네스·규칙 PR), #1·#6·#27. 결정 0085·0090(트랙 이름 접두어를 기본 프리셋으로, 2026-11-12 사용자 지시, 브랜치 이름의 `/`를 폴더로), 결정 0094(amend는 새 메시지 옵션이 있을 때만, 옵션 없는 amend와 축약이 재사용 옵션 차단을 통과) | 가설 |
 | 정기 코드 리뷰(계기, 지점 기록 한 곳, 첫 리뷰는 파일 전체 분리 리뷰) | `references/git-pr-flow.md` 2절 표, 3절 정기 코드 리뷰 | portfolio: 결정 0091 3항(PR 리뷰가 50줄 넘을 때만 열려 작은 변경과 조건 밖 경로가 리뷰 밖), 첫 리뷰에서 diff 기반 스킬이 지점 없음으로 끝남(하위 세션 A, 2026-11-12). 첫 리뷰가 hook 빈틈 셋을 찾음(결정 0094 맥락) | 가설 |
