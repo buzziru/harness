@@ -4,7 +4,7 @@
 
 로컬 기본 브랜치는 `local/main`이다(마켓플레이스 `harness-buzziru`가 따라간다). 프로젝트별 교훈은 `local/main`에서 짧은 작업 브랜치를 만들어 반영하고 합친다. 프로젝트 이름을 브랜치 이름으로 쓰지 않는다(교훈이 프로젝트를 넘어 쌓인다).
 
-근거가 프로젝트 하나뿐인 항목은 가설이다. 상태는 둘로 나눈다. `문제 재확인(프로젝트 목록)`은 그 항목이 겨냥한 문제가 다른 프로젝트에서도 났다는 뜻이고, `효과 확인(프로젝트 목록)`은 그 위치의 규칙이 있은 뒤 같은 문제가 줄었다는 뜻이다. 원 저장소 PR 후보는 효과 확인이 된 항목만 둔다. portfolio 출처의 번호는 감사 보고서 `docs/lessons/portfolio-audit-20261110.md`의 변경 번호(#)와 절 번호다. `결정 NNNN`은 portfolio 저장소 `docs/decisions/`의 결정 번호다(2026-11-12 정리, 감사 뒤 하네스 변경 37건 대조: `docs/lessons/portfolio-delta-20261112.md`, 변경 목록은 같은 폴더 `-changes.md`).
+근거가 프로젝트 하나뿐인 항목은 가설이다. 상태는 둘로 나눈다. `문제 재확인(프로젝트 목록)`은 그 항목이 겨냥한 문제가 다른 프로젝트에서도 났다는 뜻이고, `효과 확인(프로젝트 목록)`은 그 위치의 규칙이 있은 뒤 같은 문제가 줄었다는 뜻이다. 원 저장소 PR 후보는 효과 확인이 된 항목만 둔다. portfolio 출처의 번호는 감사 보고서 `docs/lessons/portfolio-audit-20261110.md`의 변경 번호(#)와 절 번호다. `결정 NNNN`은 portfolio 저장소 `docs/decisions/`의 결정 번호다(2026-11-12 정리, 감사 뒤 하네스 변경 37건 대조: `docs/lessons/portfolio-delta-20261112.md`, 변경 목록은 같은 폴더 `-changes.md`. local.4 후보 대조: `docs/lessons/portfolio-local4-20261112.md`).
 
 버전 표기는 `.claude-plugin/plugin.json`, `marketplace.json`, README·README_KO 뱃지를 같은 로컬 버전(`2.1.0-local.N`)으로 맞춘다. 뱃지는 원본 문단이지만 CONTRIBUTING의 버전 정합성 점검을 지키려고 바꾼다. 원 저장소와 다시 합칠 때 뱃지 줄은 원본 값으로 되돌린다.
 
@@ -25,9 +25,11 @@
 | 저장소 밖 파일·서비스 수정을 보호 대상에 | governance 3절 | portfolio: #42 | 가설 |
 | 화면·실행 결과로 판단할 산출물은 결과를 보고 승인, 렌더 여부 표시 | governance 5절 첫 문단 | portfolio: #39, 5절(화면을 보기 전에 결정을 요구한 곳), 결정 0050 | 가설 |
 | PR 범위와 새로 나온 일의 기본값 | governance 5절 | portfolio: #8·#27·#36, 2.4 | 가설 |
-| 병행 세션, worktree, 외부 worker | `references/parallel-sessions.md` | meet-rag: ADR-0058, 0098, 0105, 0107. portfolio: 결정 0075(외부 worker 후보 찾기, 권한 요청), 2026-11-12 하위 세션 운용 | 문제 재확인(meet-rag, portfolio, 환경 한정) |
-| 질문 형식(무엇·왜·선택지별 차이·추천, 결정은 내용으로) | governance 2절 | portfolio: 결정 0082(결정 번호만 댄 질문에 사용자가 되물음, 사용자 기억과 기록이 다름) | 가설 |
-| git·PR 흐름을 선택으로, 정할 항목과 기본 프리셋 | `references/git-pr-flow.md`, `harness` 1단계 7·8단계 | portfolio: 결정 0005·0012·0014·0015·0032·0054·0055·0060, 감사 0절(첫 27시간 PR 16개 중 11개가 하네스·규칙 PR), #1·#6·#27 | 가설 |
+| 병행 세션, worktree, 외부 worker | `references/parallel-sessions.md` | meet-rag: ADR-0058, 0098, 0105, 0107. portfolio: 결정 0075(외부 worker 후보 찾기, 권한 요청), 2026-11-12 하위 세션 운용, 결정 0085(결정 번호를 브랜치 낼 때 공유 기록에 예약, 그 뒤 0085\~0096 겹침 없음), 창 재사용(`/clear`, `/exit` 뒤 재시작)과 Windows 입력(`MSYS_NO_PATHCONV=1`, PowerShell `;`)은 portfolio 메모리·넘김 문서 | 문제 재확인(meet-rag, portfolio, 환경 한정) |
+| 질문 형식(무엇·왜·선택지별 차이·추천, 결정은 내용으로) | governance 2절 | portfolio: 결정 0082(결정 번호만 댄 질문에 사용자가 되물음, 사용자 기억과 기록이 다름). 2026-11-12 같은 날 차이 점검 질문 네 개가 이 형식으로 나갔고 되물음 기록 없음(하루치라 효과 확인 아님) | 가설 |
+| git·PR 흐름을 선택으로, 정할 항목과 기본 프리셋 | `references/git-pr-flow.md`, `harness` 1단계 7·8단계 | portfolio: 결정 0005·0012·0014·0015·0032·0054·0055·0060, 감사 0절(첫 27시간 PR 16개 중 11개가 하네스·규칙 PR), #1·#6·#27. 결정 0085·0090(트랙 이름 접두어를 기본 프리셋으로, 2026-11-12 사용자 지시, 브랜치 이름의 `/`를 폴더로), 결정 0094(amend는 새 메시지 옵션이 있을 때만, 옵션 없는 amend와 축약이 재사용 옵션 차단을 통과) | 가설 |
+| 정기 코드 리뷰(계기, 지점 기록 한 곳, 첫 리뷰는 파일 전체 분리 리뷰) | `references/git-pr-flow.md` 2절 표, 3절 정기 코드 리뷰 | portfolio: 결정 0091 3항(PR 리뷰가 50줄 넘을 때만 열려 작은 변경과 조건 밖 경로가 리뷰 밖), 첫 리뷰에서 diff 기반 스킬이 지점 없음으로 끝남(하위 세션 A, 2026-11-12). 첫 리뷰가 hook 빈틈 셋을 찾음(결정 0094 맥락) | 가설 |
+| 사실표가 있는 검증의 원자료 범위, 상태 괄호는 뜻으로 | `references/team-patterns.md` 1-4 | portfolio: 결정 0092(지난 C4 지적 36건 중 원자료로 잡힌 9건, 그중 6건은 사실표 없는 작업, 사실표 숫자 오류 0건) | 가설 |
 | 2라운드부터 변경분만 재검증 | `references/team-patterns.md` 1-4 | portfolio: 결정 0032·0060 | 가설 |
 | 화면 판정 장치를 구축 때 | `harness` 6-7 | portfolio: 결정 0052(측정·촬영 스크립트를 구축 뒤에 만들어 다섯 번 고침) | 가설 |
 | 규칙 수정과 강제 장치의 기준 | governance 8절, `evolve` Phase 3 관문 (라) | portfolio: #29·#44, 2026-11-12 정리(장치는 기계 판정되는 실패에만) | 가설 |

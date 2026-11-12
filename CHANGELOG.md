@@ -2,6 +2,22 @@
 
 이 프로젝트는 [Semantic Versioning](https://semver.org/)을 따릅니다.
 
+## [2.1.0-local.4] - 2026-11-12 (로컬 포크)
+
+로컬 포크 `harness-buzziru`의 변경이다. 후보별 반영 여부와 근거는 `docs/lessons/portfolio-local4-20261112.md`에 있다.
+
+### Added
+
+- **사실표가 있는 검증의 원자료 범위** (`team-patterns` 1-4) — 승인된 사실표의 '확인' 행은 사실표까지 대조하고, 원자료는 계산값·충돌 행·조건이 바뀐 문장·판정 규칙·측정 방법 문장과 표본에만 연다. 상태 칸 괄호는 뜻으로 가름
+- **정기 코드 리뷰** (`git-pr-flow` 2·3절) — PR별 코드 리뷰 문턱 밖에 쌓인 코드를 계기(인수인계, 코드 PR 누적)마다 봄. 지점 기록은 한 곳, 지점이 없는 첫 리뷰는 파일 전체를 읽는 분리 리뷰
+
+### Changed
+
+- **브랜치 이름과 폴더 경로** (`git-pr-flow` 2·3절) — 브랜치 접두어 기본값을 하네스 트랙 이름으로(트랙이 하나뿐이거나 없으면 관행 접두어), 브랜치 이름으로 만든 폴더는 `/`를 하위 폴더로 씀
+- **amend 규칙** (`git-pr-flow` 2·3절, governance 8절 표) — 재사용 옵션 금지에서 새 메시지 옵션이 있을 때만 허용으로. 옵션 없는 amend도 비대화 환경에서 옛 메시지를 남김
+- **하위 세션 창 재사용과 Windows 입력** (`parallel-sessions`) — `/clear`와 `/exit` 뒤 재시작, `MSYS_NO_PATHCONV=1`, PowerShell 5.1의 `;`
+- **버전 정합성** — `plugin.json`·`marketplace.json`·README 뱃지(EN/KO)를 2.1.0-local.4로
+
 ## [2.1.0-local.3] - 2026-11-12 (로컬 포크)
 
 로컬 포크 `harness-buzziru`의 변경이다. 2.1.0-local.1·2의 변경과 항목별 출처·상태는 `LOCAL_CHANGES.md`에 있다.
