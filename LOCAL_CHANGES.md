@@ -4,6 +4,19 @@
 
 로컬 기본 브랜치는 `local/main`이다(마켓플레이스 `harness-buzziru`가 따라간다). 프로젝트별 교훈은 `local/main`에서 짧은 작업 브랜치를 만들어 반영하고 합친다. 프로젝트 이름을 브랜치 이름으로 쓰지 않는다(교훈이 프로젝트를 넘어 쌓인다).
 
+## 포크 작업 흐름
+
+다른 프로젝트의 세션이 포크에 변경을 반영할 때 이 절을 따른다.
+
+- `local/main`에서 작업 브랜치를 내고, 끝나면 `local/main`에 합쳐 `origin`에 푸시한다. `local/main`에 직접 커밋하지 않는다. 합친 작업 브랜치는 지운다.
+- 브랜치 이름은 `local/<종류>/<주제>`다. `local/` 아래에 두어 원 저장소 브랜치(`main`, `fix/*`, `release/*`)와 섞이지 않게 한다. 종류는 셋이다.
+  - `lesson`: 프로젝트 교훈을 스킬·참고 문서에 반영(예: `local/lesson/verifier-scope`). 주제는 규칙 이름으로 짓고 프로젝트 이름을 쓰지 않는다
+  - `sync`: 원 저장소 갱신을 합침(예: `local/sync/v2.2.0`)
+  - `chore`: 버전, 기록, 문서처럼 스킬 동작이 바뀌지 않는 정리(예: `local/chore/branch-naming`)
+- 원 저장소에 PR로 올릴 후보는 `upstream/main`에서 원 저장소 관례(`fix/*`, `feat/*`)로 따로 낸다. 효과 확인이 된 항목만 올린다(위 상태 구분).
+- 커밋 메시지는 `local: `로 시작하는 한국어 한 줄과 본문이다. 버전을 올리는 변경이면 아래 버전 표기 네 곳을 함께 맞춘다.
+- 푸시 뒤 전역 설치를 갱신한다. `claude plugin marketplace update`가 Windows 폴더 잠금(EPERM)으로 실패하면 마켓플레이스 폴더(`~/.claude/plugins/marketplaces/harness-buzziru`)에서 `git pull --ff-only` 뒤 `claude plugin update harness@harness-buzziru`로 한다.
+
 근거가 프로젝트 하나뿐인 항목은 가설이다. 상태는 둘로 나눈다. `문제 재확인(프로젝트 목록)`은 그 항목이 겨냥한 문제가 다른 프로젝트에서도 났다는 뜻이고, `효과 확인(프로젝트 목록)`은 그 위치의 규칙이 있은 뒤 같은 문제가 줄었다는 뜻이다. 원 저장소 PR 후보는 효과 확인이 된 항목만 둔다. portfolio 출처의 번호는 감사 보고서 `docs/lessons/portfolio-audit-20261110.md`의 변경 번호(#)와 절 번호다. `결정 NNNN`은 portfolio 저장소 `docs/decisions/`의 결정 번호다(2026-11-12 정리, 감사 뒤 하네스 변경 37건 대조: `docs/lessons/portfolio-delta-20261112.md`, 변경 목록은 같은 폴더 `-changes.md`. local.4 후보 대조: `docs/lessons/portfolio-local4-20261112.md`).
 
 버전 표기는 `.claude-plugin/plugin.json`, `marketplace.json`, README·README_KO 뱃지를 같은 로컬 버전(`2.1.0-local.N`)으로 맞춘다. 뱃지는 원본 문단이지만 CONTRIBUTING의 버전 정합성 점검을 지키려고 바꾼다. 원 저장소와 다시 합칠 때 뱃지 줄은 원본 값으로 되돌린다.

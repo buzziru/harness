@@ -2,6 +2,12 @@
 
 이 프로젝트는 [Semantic Versioning](https://semver.org/)을 따릅니다.
 
+## [Unreleased] (로컬 포크)
+
+### Added
+
+- **포크 작업 흐름** (`LOCAL_CHANGES.md`) — 다른 프로젝트에서 포크에 반영할 때의 브랜치 이름 `local/<종류>/<주제>`(종류 `lesson`·`sync`·`chore`), `local/main` 직접 커밋 금지, 원 저장소 PR 후보 브랜치, 커밋 메시지, 푸시 뒤 전역 설치 갱신
+
 ## [2.1.0-local.4] - 2026-11-12 (로컬 포크)
 
 로컬 포크 `harness-buzziru`의 변경이다. 후보별 반영 여부와 근거는 `docs/lessons/portfolio-local4-20261112.md`에 있다.
