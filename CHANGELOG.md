@@ -4,6 +4,14 @@
 
 ## [Unreleased] (로컬 포크)
 
+## [2.1.0-local.7] - 2026-11-17 (로컬 포크)
+
+### Changed
+
+- **외부 worker 띄우는 법** (`references/parallel-sessions.md`) — worker 도구를 지연 로드에서 불러오는 문장을 지우고, Orca 분할 창의 CLI 세션에 `task-create` + `dispatch --inject`로 일을 넣고 `check --wait`로 받는 절차로. 하위 세션의 직접 일 넣기는 Nested worker depth 2 전제, 깊이 2는 worker 전용, 자기 Run
+- **worker 출력 권한** (`references/parallel-sessions.md`) — 요청마다 그 경로만 한 번 허용하던 것을 출력 폴더 쓰기만 worker 설정에서 미리 허용으로
+- **버전 정합성** — `plugin.json`·`marketplace.json`·README 뱃지(EN/KO)를 2.1.0-local.7로
+
 ## [2.1.0-local.6] - 2026-11-13 (로컬 포크)
 
 ### Added
