@@ -21,7 +21,7 @@ description: "하네스 진화 스킬. 사용 중인 하네스의 실행 결과�
 
 ### Phase 1: 델타 수집
 
-1. `.claude/agents/`, `.claude/skills/`, `CLAUDE.md`(변경 이력 테이블)를 읽는다
+1. `.claude/agents/`, `.claude/skills/`, `CLAUDE.md`(변경 이력 테이블)를 읽는다. (로컬 추가) 이력 표는 `CLAUDE.md`가 가리키는 이력 파일(`.claude/harness.json`의 `changelog`)에 있다
 2. git 저장소라면 하네스 파일들의 변경 이력을 조회한다 (`git log --oneline -- .claude/ CLAUDE.md`) — 초기 구성 대비 무엇이 언제 왜 바뀌었는지 파악
 3. `_workspace/`가 있으면 최근 실행의 중간 산출물을 훑어 실제 실행 흔적을 확인한다:
    - 오케스트레이터가 정의한 경로에 산출물이 실제로 있는가 (없으면 워크플로우가 우회되었거나 죽은 코드)
@@ -74,7 +74,7 @@ description: "하네스 진화 스킬. 사용 중인 하네스의 실행 결과�
 
 ### Phase 4: 변경 이력 갱신 및 검증
 
-1. CLAUDE.md의 **변경 이력** 테이블에 기록한다:
+1. CLAUDE.md의 **변경 이력** 테이블에 기록한다((로컬 추가) 이력 파일이 따로 있으면 그 파일에):
 
 ```markdown
 **변경 이력:**
@@ -83,7 +83,7 @@ description: "하네스 진화 스킬. 사용 중인 하네스의 실행 결과�
 | 2026-07-19 | 톤 가이드 추가 | skills/content-creator | "너무 딱딱하다" 피드백 |
 ```
 
-   (로컬 추가) 이력이 열 건을 넘으면 표 대신 결정 하나에 파일 하나로 둔다(`harness` 스킬 `references/project-governance.md` 4절). 반영한 대기 항목의 상태를 `반영(결정 번호)`로 바꾼다. 행(또는 파일)마다 그 변경의 이행을 보는 장치를 적는다. 위 표라면 `장치` 칸을 더해 `장치: tests/tone.test.mjs`나 `장치 없음: 문체는 분리 검토로 본다`처럼 쓴다. 형식은 같은 문서 4-1절이다
+   (로컬 추가) 이력은 `CLAUDE.md` 밖의 이력 파일 하나에 표로 둔다(`harness` 스킬 `references/project-governance.md` 4절). 반영한 대기 항목의 상태를 `반영(이력 날짜)`로 바꾼다. 행(기존 폴더 형식이면 파일)마다 그 변경의 이행을 보는 장치를 적는다. 위 표라면 `장치` 칸을 더해 `장치: tests/tone.test.mjs`나 `장치 없음: 문체는 분리 검토로 본다`처럼 쓴다. 형식은 같은 문서 4-1절이다
 2. 수정된 파일의 구조를 검증한다 (frontmatter, 참조 일관성). (로컬 추가) `harness` 스킬의 `scripts/check-harness.mjs --stage evolve <프로젝트 루트>`가 0인지 본다. 하네스 파일의 형식과, 이번에 더한 이력 행의 장치를 검사한다. 기준이 HEAD가 아니면(이미 커밋했으면) `--base <반영 전 커밋>`을 준다
 3. description을 수정했다면 트리거 검증 (should-trigger + near-miss 각 3개 이상)
 4. CLAUDE.md와 실제 파일의 일치 여부 최종 확인

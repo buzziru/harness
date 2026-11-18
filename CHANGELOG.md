@@ -4,6 +4,17 @@
 
 ## [Unreleased] (로컬 포크)
 
+## [2.1.0-local.10] - 2026-11-18 (로컬 포크)
+
+### Changed
+
+- **변경 이력 위치** (`SKILL.md` 5-4, `evolve` Phase 4, `references/project-governance.md` 4절) — "이력이 열 건을 넘으면 결정 하나에 파일 하나로"를 지우고, 처음부터 `CLAUDE.md` 밖 이력 파일 하나에 표로 두게 함(4-1절 형식 설명도 맞추고, 기존 `CLAUDE.md` 표·폴더 형식은 검사가 그대로 받음). 원본 문단이 `CLAUDE.md` 이력을 가리키는 곳(`SKILL.md` 7단계 3·점검표, `evolve` Phase 1·4)에 이력 파일 위치를 한 줄씩 더함. local.8의 결정 수명과 반대 방향이던 문장
+- **정기 코드 리뷰** (`references/git-pr-flow.md`) — 전체 흐름 기본 프리셋에서 빼고 고르는 항목으로(기본값 없음). 코드가 산출물의 대부분일 때만 권함. 기존 frame의 `- 정기 코드 리뷰: 기본`은 이제 없음을 뜻한다
+- **규칙 본문의 사례** (`project-governance.md`, `qa-agent-guide.md`, `git-pr-flow.md`, `parallel-sessions.md`) — 이유 문장의 프로젝트 이름·결정 번호·날짜를 지움(출처는 `LOCAL_CHANGES.md`에 그대로)
+- **환경 한정 절차** (`parallel-sessions.md`) — Orca 명령과 Windows 입력 요령을 빼고 환경과 무관하게 정할 것 네 가지만 남김. 환경별 절차는 사용자 개인 스킬에 둠
+- **1단계 7** (`SKILL.md`) — 같은 뜻의 문장을 합쳐 문단을 줄임(절차 같음)
+- **버전 정합성** — `plugin.json`·`marketplace.json`·README 뱃지(EN/KO)를 2.1.0-local.10으로
+
 ## [2.1.0-local.9] - 2026-11-18 (로컬 포크)
 
 ### Added
