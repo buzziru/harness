@@ -21,7 +21,7 @@ description: "하네스 진화 스킬. 사용 중인 하네스의 실행 결과�
 
 ### Phase 1: 델타 수집
 
-1. `.claude/agents/`, `.claude/skills/`, `CLAUDE.md`(변경 이력 테이블)를 읽는다
+1. `.claude/agents/`, `.claude/skills/`, `CLAUDE.md`(변경 이력 테이블)를 읽는다. (로컬 추가) 이력 표는 `CLAUDE.md`가 가리키는 이력 파일(`.claude/harness.json`의 `changelog`)에 있다
 2. git 저장소라면 하네스 파일들의 변경 이력을 조회한다 (`git log --oneline -- .claude/ CLAUDE.md`) — 초기 구성 대비 무엇이 언제 왜 바뀌었는지 파악
 3. `_workspace/`가 있으면 최근 실행의 중간 산출물을 훑어 실제 실행 흔적을 확인한다:
    - 오케스트레이터가 정의한 경로에 산출물이 실제로 있는가 (없으면 워크플로우가 우회되었거나 죽은 코드)
@@ -74,7 +74,7 @@ description: "하네스 진화 스킬. 사용 중인 하네스의 실행 결과�
 
 ### Phase 4: 변경 이력 갱신 및 검증
 
-1. CLAUDE.md의 **변경 이력** 테이블에 기록한다:
+1. CLAUDE.md의 **변경 이력** 테이블에 기록한다((로컬 추가) 이력 파일이 따로 있으면 그 파일에):
 
 ```markdown
 **변경 이력:**
