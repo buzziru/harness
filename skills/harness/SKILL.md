@@ -303,7 +303,7 @@ Claude는 스킬의 `name`과 `description`을 보고 어떤 스킬을 불러올
 
 에이전트·스킬 목록, 디렉터리 구조, 자세한 실행 규칙은 넣지 않는다. 이 정보는 오케스트레이터 스킬과 `.claude/agents/`, `.claude/skills/`에서 관리한다. `CLAUDE.md`에는 호출 조건과 변경 이력만 둔다.
 
-(로컬 추가) 변경 이력이 열 건을 넘으면 표를 결정 하나에 파일 하나로 옮기고 `CLAUDE.md`에는 위치만 남긴다. 형식과 삭제 조건은 `references/project-governance.md` 4절을 따른다. 호출 조건에는 "하네스 파일(에이전트·스킬·오케스트레이터·`CLAUDE.md` 하네스 절)을 고치는 피드백은 `harness:evolve`로 처리한다(반영 전 관문을 거친다)"를 함께 적는다.
+(로컬 추가) 변경 이력은 `CLAUDE.md` 밖의 이력 파일 하나에 두고 `CLAUDE.md`에는 위치만 남긴다. 형식은 `references/project-governance.md` 4절·4-1절을 따른다. 호출 조건에는 "하네스 파일(에이전트·스킬·오케스트레이터·`CLAUDE.md` 하네스 절)을 고치는 피드백은 `harness:evolve`로 처리한다(반영 전 관문을 거친다)"를 함께 적는다.
 
 #### 5-5. 후속 요청 처리
 
