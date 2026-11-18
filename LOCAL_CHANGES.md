@@ -57,7 +57,9 @@
 | 사용자 설명 행은 원자료로 닫히지 않아도 다시 묻는 근거로 쓰지 않음, 작업 간 확정 주제 대조 | `team-patterns` 1-4 | portfolio 2026-11-13: 다음 작업의 분리 리뷰가 확정 주제를 다른 문장으로 다시 엶, 결정 0130 | 가설 |
 | 재검증 계기를 토큰·주장 변화로(고친 계기와 무관) | `team-patterns` 1-4 | portfolio 2026-11-13: 문구 수정 뒤 C4 다섯 라운드, major 4건 모두 새 문장·뜻 바뀐 문장, 숫자 그대로인 재검증은 지적 0, 결정 0133. 2026-11-12 조건 낱말 한 줄로 round3\~7(결정 0114) | 가설(portfolio 안 재발 2회) |
 | worker 우선 범위를 탐색 전반으로, 지연 로드면 먼저 불러오기 | `parallel-sessions` 외부 worker | portfolio 2026-11-13: 문서·스킬 조사에서 메인이 지시 없이 하위 에이전트를 고름, 결정 0132 | 가설 |
+| 절차 관문의 형식 검사(`check-harness.mjs` design·build·evolve), 운영 틀 답은 frame 한 파일 | `harness` 0단계·1단계 7·2단계 머리·6-1·점검표, `scripts/check-harness.mjs`, governance 4-1·8-2, `git-pr-flow` 4절, `evolve` Phase 4 | portfolio 2026-11-18: 1단계 7 운영 틀 질문, 5-3 규모별 경로, evolve 관문 (라), 점검표가 글로만 있어 건너뛰어도 막히지 않았고, 운영 틀 답이 frame 없이 결정 파일과 `CLAUDE.md` Git 절에 흩어짐. 같은 날 `--stage build` 결과 D1(harness.json 없음). 소급은 portfolio backlog B-131 | 가설 |
 
 ## 사용자 결정
 
 - 2026-11-12 git·PR 흐름 반영: 문서 이름 `git-pr-flow.md`, 용어는 'git·PR 흐름'(이 포크에서 '워크플로'는 Workflow 도구, 1단계 3의 '작업 흐름'은 실행 모드 고르기라 겹치지 않게). 1단계 7에서 넣지 않음, 가벼운 흐름, 전체 흐름 세 단계로 묻는다. 문서는 정할 항목, 선택지, 기본 프리셋으로 쓰고 프리셋에 프로젝트 이름을 붙이지 않는다. 규칙과 강제 장치의 기준은 governance 8절에 두고 evolve 관문에서 경로만 가리킨다. 버전은 json 둘과 README 뱃지 둘을 `2.1.0-local.3`으로 맞추고 CHANGELOG에 새 절을 둔다
+- 2026-11-18 절차 관문 검사: portfolio에는 소급하지 않는다(사이트 완성과 덱이 먼저, portfolio backlog B-131). 생성된 프로젝트 CI에는 넣지 않고 0단계·2단계 머리·6단계·evolve Phase 4에서만 부른다(CI에 넣으면 스크립트를 프로젝트에 복사해 두 곳을 맞춰야 한다). 운영 틀 답은 frame 한 파일에 두고 `CLAUDE.md` Git 절과 오케스트레이터는 그 답을 적용한 절차만 둔다

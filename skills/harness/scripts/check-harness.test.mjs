@@ -1,0 +1,167 @@
+// check-harness.mjs 단위 시험. 픽스처는 os.tmpdir()에 만들고 끝나면 지운다.
+import { test, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { check } from './check-harness.mjs';
+
+const tmp = mkdtempSync(join(tmpdir(), 'check-harness-'));
+after(() => rmSync(tmp, { recursive: true, force: true }));
+
+const FRAME = [
+  '# 운영 틀',
+  '## 판정 방법', '- 답: npm test', '- 출처: 사용자 2026-11-18 "테스트로 판정"',
+  '## 승인 지점과 자율 범위', '- 답: 공개 전에 묻는다', '- 출처: 사용자 2026-11-18 "배포 전엔 물어"',
+  '## 보호 장치', '- 답: main 푸시를 막는다', '- 출처: 사용자 2026-11-18 "main은 배포"',
+  '- 대상: main 직접 푸시', '  - 장치: .claude/hooks/guard.mjs 푸시 차단',
+  '- 대상: 비밀 값 출력', '  - 장치: deny Read(.env)',
+  '- 대상: 외부 전송', '  - 장치 없음: 외부 전송 경로가 없다',
+  '## 결정 기록', '- 답: docs/decisions/', '- 출처: 메인',
+  '## 사람 검토 지점', '- 답: PR 검토 안내', '- 출처: 사용자 2026-11-18 "PR에서 볼게"',
+  '## git·PR 흐름', '- 답: 가벼운 흐름', '- 출처: 사용자 2026-11-18 "가볍게"',
+  '- 통합 방식: 기본', '- 브랜치 이름: 주제만 이유: 브랜치가 적다', '- 하네스 변경 분리: 기본',
+  '- 보호 확인: 기본', '- 커밋 규칙: 기본',
+].join('\n');
+
+const ORCH = [
+  '---', 'name: orch', 'description: x', '---',
+  '| 규모 | 경로 |', '| --- | --- |', '| 문구 | 생성, 검증 |', '',
+  '| 사용자에게 묻는다 | 메인이 정한다 |', '| --- | --- |', '| 배포 | 경로 이름 |',
+].join('\n');
+
+const CHANGELOG = ['# 변경 이력', '사유 칸에 장치: 또는 장치 없음: 을 적는다.', '',
+  '| 날짜 | 변경 | 사유 |', '| --- | --- | --- |', '| 2026-11-18 | 처음 구성 | 장치 없음: 첫 구성 |', ''].join('\n');
+
+let n = 0;
+function project(over = {}) {
+  const root = join(tmp, 'p' + n++);
+  const files = {
+    '.claude/harness.json': JSON.stringify({ frame: 'docs/harness/frame.md', orchestrator: '.claude/skills/orch/SKILL.md', changelog: 'docs/harness/CHANGELOG.md', gitFlow: 'light' }),
+    'docs/harness/frame.md': FRAME,
+    '.claude/skills/orch/SKILL.md': ORCH,
+    '.claude/agents/a.md': '---\nname: a\nmodel: sonnet\n---\n본문',
+    '.claude/hooks/guard.mjs': '',
+    '.claude/settings.json': JSON.stringify({ permissions: { deny: ['Read(.env)'] } }),
+    'CLAUDE.md': '# 프로젝트\n\n## Git\n\n- PR로 합친다',
+    'docs/harness/CHANGELOG.md': CHANGELOG,
+    ...over,
+  };
+  for (const [p, c] of Object.entries(files)) {
+    if (c === null) continue;
+    mkdirSync(dirname(join(root, p)), { recursive: true });
+    writeFileSync(join(root, p), c);
+  }
+  return root;
+}
+const ids = (found) => found.map((f) => f.split(':')[0]);
+const frameWith = (from, to) => ({ 'docs/harness/frame.md': FRAME.replace(from, to) });
+
+test('통과 사례: design·build 위반 없음', () => {
+  const root = project();
+  assert.deepEqual(check('design', root), []);
+  assert.deepEqual(check('build', root), []);
+});
+
+test('D1: harness.json 없음, 키 빠짐, gitFlow 값', () => {
+  assert.deepEqual(ids(check('design', project({ '.claude/harness.json': null }))), ['D1']);
+  assert.deepEqual(ids(check('design', project({ '.claude/harness.json': '{"frame":"x"}' }))), ['D1']);
+  assert.deepEqual(ids(check('design', project({ '.claude/harness.json': JSON.stringify({ frame: 'a', orchestrator: 'b', changelog: 'c', gitFlow: 'some' }) }))), ['D1']);
+});
+
+test('D2: frame 없음, 절 빠짐', () => {
+  assert.deepEqual(ids(check('design', project({ 'docs/harness/frame.md': null }))), ['D2']);
+  assert.deepEqual(ids(check('design', project(frameWith('## 사람 검토 지점', '## 사람 검토')))), ['D2']);
+});
+
+test('D3: 답 줄 없음, 출처 형식', () => {
+  assert.deepEqual(ids(check('design', project(frameWith('- 답: npm test', '')))), ['D3']);
+  assert.deepEqual(ids(check('design', project(frameWith('- 출처: 메인', '- 출처: 메인이 정함')))), ['D3']);
+  assert.deepEqual(ids(check('design', project(frameWith('사용자 2026-11-18 "테스트로 판정"', '사용자 어제')))), ['D3']);
+});
+
+test('D4: 사용자에게 묻는 절의 출처가 메인', () => {
+  assert.deepEqual(ids(check('design', project(frameWith('- 출처: 사용자 2026-11-18 "테스트로 판정"', '- 출처: 메인')))), ['D4']);
+});
+
+test('D5: 대상 없음, 장치 줄 없음', () => {
+  const noTargets = FRAME.split('\n').filter((l) => !/^\s*- (대상|장치|장치 없음):/.test(l)).join('\n');
+  assert.deepEqual(ids(check('design', project({ 'docs/harness/frame.md': noTargets }))), ['D5']);
+  assert.deepEqual(ids(check('design', project(frameWith('  - 장치 없음: 외부 전송 경로가 없다', '  - 메모')))), ['D5']);
+});
+
+test('D6: 항목 빠짐, 이유 없는 다른 값, full이면 전체 항목까지, none이면 검사 안 함', () => {
+  assert.deepEqual(ids(check('design', project(frameWith('- 커밋 규칙: 기본', '')))), ['D6']);
+  assert.deepEqual(ids(check('design', project(frameWith(' 이유: 브랜치가 적다', '')))), ['D6']);
+  const full = JSON.stringify({ frame: 'docs/harness/frame.md', orchestrator: '.claude/skills/orch/SKILL.md', changelog: 'docs/harness/CHANGELOG.md', gitFlow: 'full' });
+  assert.ok(ids(check('design', project({ '.claude/harness.json': full }))).every((id) => id === 'D6'));
+  assert.ok(check('design', project({ '.claude/harness.json': full })).length > 1);
+  const none = JSON.stringify({ frame: 'docs/harness/frame.md', orchestrator: '.claude/skills/orch/SKILL.md', changelog: 'docs/harness/CHANGELOG.md', gitFlow: 'none' });
+  assert.deepEqual(check('build', project({ '.claude/harness.json': none, ...frameWith('- 커밋 규칙: 기본', ''), 'CLAUDE.md': '# x' })), []);
+});
+
+test('B1: build는 design 검사를 포함한다', () => {
+  assert.deepEqual(ids(check('build', project(frameWith('- 답: npm test', '')))), ['D3']);
+});
+
+test('B2·B3: 오케스트레이터 표', () => {
+  assert.deepEqual(ids(check('build', project({ '.claude/skills/orch/SKILL.md': ORCH.replace('| 규모 | 경로 |', '| 크기 | 단계 |') }))), ['B2']);
+  assert.deepEqual(ids(check('build', project({ '.claude/skills/orch/SKILL.md': ORCH.replace('사용자에게 묻는다', '묻는 일') }))), ['B3']);
+});
+
+test('B4: 장치 경로·deny 규칙이 없음', () => {
+  assert.deepEqual(ids(check('build', project({ '.claude/hooks/guard.mjs': null }))), ['B4']);
+  assert.deepEqual(ids(check('build', project({ '.claude/settings.json': '{}' }))), ['B4']);
+});
+
+test('B5: CLAUDE.md Git 절', () => {
+  assert.deepEqual(ids(check('build', project({ 'CLAUDE.md': '# 프로젝트' }))), ['B5']);
+});
+
+test('B6: 변경 이력 머리에 장치', () => {
+  assert.deepEqual(ids(check('build', project({ 'docs/harness/CHANGELOG.md': '| 날짜 | 변경 |\n| --- | --- |\n| a | b |' }))), ['B6']);
+});
+
+test('B7: commands, model:, 500줄, v1', () => {
+  assert.deepEqual(ids(check('build', project({ '.claude/commands/x.md': 'x' }))), ['B7']);
+  assert.deepEqual(ids(check('build', project({ '.claude/agents/b.md': '---\nname: b\n---\n' }))), ['B7']);
+  assert.deepEqual(ids(check('build', project({ '.claude/skills/big/SKILL.md': 'x\n'.repeat(500) }))), ['B7']);
+  assert.deepEqual(ids(check('build', project({ '.claude/agents/c.md': '---\nname: c\nmodel: opus\n---\nTeamCreate로 만든다' }))), ['B7']);
+});
+
+function gitProject(over) {
+  const root = project(over);
+  const g = (...a) => execFileSync('git', ['-C', root, ...a], { stdio: 'pipe' });
+  g('init', '-q');
+  g('add', '-A');
+  g('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'init');
+  return root;
+}
+
+test('E1: 표 이력에 더한 행', () => {
+  const root = gitProject();
+  assert.deepEqual(check('evolve', root), []);
+  const p = join(root, 'docs/harness/CHANGELOG.md');
+  writeFileSync(p, readFileSync(p, 'utf8') + '| 2026-11-19 | 규칙 더함 | 장치: tests/x.test.mjs |\n');
+  assert.deepEqual(check('evolve', root), []);
+  writeFileSync(p, readFileSync(p, 'utf8') + '| 2026-11-19 | 규칙 더함 | 피드백 |\n');
+  assert.deepEqual(ids(check('evolve', root)), ['E1']);
+});
+
+test('E1: ADR 폴더의 새 파일(추적 안 된 파일 포함), 잘못된 기준', () => {
+  const adr = { 'docs/harness/CHANGELOG.md': null, 'docs/harness/adr/README.md': '형식: 상태, 맥락, 결정, 장치:', 'docs/harness/adr/0001.md': '# 0001\n장치 없음: 첫 구성' };
+  const json = JSON.stringify({ frame: 'docs/harness/frame.md', orchestrator: '.claude/skills/orch/SKILL.md', changelog: 'docs/harness/adr', gitFlow: 'light' });
+  const root = gitProject({ ...adr, '.claude/harness.json': json });
+  assert.deepEqual(check('evolve', root), []);
+  writeFileSync(join(root, 'docs/harness/adr/0002.md'), '# 0002\n장치: tests/y.test.mjs');
+  assert.deepEqual(check('evolve', root), []);
+  writeFileSync(join(root, 'docs/harness/adr/0003.md'), '# 0003\n규칙만 더함');
+  assert.deepEqual(ids(check('evolve', root)), ['E1']);
+  assert.deepEqual(ids(check('evolve', root, 'no-such-ref')), ['E1']);
+});
+
+test('E2: evolve는 B 검사를 포함하고 D 검사는 하지 않는다', () => {
+  const root = gitProject({ '.claude/commands/x.md': 'x', ...frameWith('- 답: npm test', '') });
+  assert.deepEqual(ids(check('evolve', root)), ['B7']);
+});
