@@ -4,6 +4,22 @@
 
 ## [Unreleased] (로컬 포크)
 
+## [2.1.0-local.9] - 2026-11-18 (로컬 포크)
+
+### Added
+
+- **절차 관문 검사** (`skills/harness/scripts/check-harness.mjs`, node 의존성 없음) — `--stage design`(운영 틀 기록과 `.claude/harness.json` 형식, 출처가 사용자인지, 보호 대상마다 장치, git·PR 흐름 항목 값), `--stage build`(`design`에 더해 오케스트레이터의 규모별 경로·승인 지점 표, 장치 경로·deny 규칙 실재, `CLAUDE.md` Git 절, 변경 이력 머리의 장치, 점검표의 기계 판정 줄), `--stage evolve`(`build`의 B2\~B7과 이번에 더한 이력 행의 장치). 단위 시험 `check-harness.test.mjs`(픽스처는 임시 폴더에 만들고 지움). 1단계 7, 5-3, 산출물 점검표, evolve Phase 4가 글로만 있어 건너뛰어도 막히지 않던 것을 형식 검사로 확인. 생성된 프로젝트 CI에는 넣지 않고 0단계·2단계 머리·6단계·evolve Phase 4에서만 부름
+- **운영 틀 기록과 하네스 목록 파일 형식** (`references/project-governance.md` 4-1) — frame 절 여섯, `- 답:`·`- 출처:`, 보호 대상의 `장치:`·`장치 없음:`, git·PR 항목의 `기본`·`이유:`, 변경 이력의 장치 칸. 운영 틀 답은 frame 한 파일에만 두고 오케스트레이터와 `CLAUDE.md` Git 절은 적용한 절차만
+
+### Changed
+
+- **2단계 머리** (`SKILL.md`) — 결정 기록 경로를 적던 문장을 `--stage design` 통과로
+- **0단계·6-1·산출물 점검표** (`SKILL.md`) — 기존 하네스 점검과 검증에 `--stage build`, 점검표의 운영 틀 줄을 검사 명령 줄로
+- **evolve Phase 4** — 이력 행마다 장치, 기록 뒤 `--stage evolve`
+- **git·PR 값의 기록처** (`references/git-pr-flow.md` 4절) — `CLAUDE.md` Git 절에 값과 결정 번호를 적던 것을 frame에만 두는 것으로(governance 4절의 결정 번호 원칙과 맞춤)
+- **governance 8-2 표** — 절차 관문을 건너뜀은 8-1 형식 검사로
+- **버전 정합성** — `plugin.json`·`marketplace.json`·README 뱃지(EN/KO)를 2.1.0-local.9로
+
 ## [2.1.0-local.8] - 2026-11-18 (로컬 포크)
 
 ### Changed
