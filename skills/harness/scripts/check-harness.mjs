@@ -24,9 +24,14 @@
 //   C4 오케스트레이터가 노드 id를 모두 가리키고, 에이전트 정의가 맡은 노드 id를 가리키며 입력·출력 규칙 절을 따로 두지 않는다
 //   C5 parallel로 선언한 두 노드의 writes가 겹치지 않는다
 //   C6 사람 게이트(kind: human) 노드가 하나 이상 있다
-// evolve (evolve Phase 4): B2~B7, C1~C6(contracts 키가 없는 이전 하네스는 C를 건너뜀)과
+//   C7 계약의 paths(작업 종류별 노드 순서)마다 필수 입력의 from이 앞 원소의 노드이고, 묶음 노드끼리 parallel이다
+//   C8 모든 노드가 경로 하나 이상에 든다. C7·C8은 paths가 있을 때만(없으면 evolve 정보 줄)
+//   C9 하네스 문서(.claude/ 아래 md)가 `경로`로 가리키는 추적 파일이 어느 노드의 writes에도, 계약의 main(메인이 고치는 파일)에도 없다.
+//      main이 있을 때만(없으면 evolve 정보 줄에 수). .claude/ 아래와 frame·changelog는 evolve가 고치므로 뺀다
+// evolve (evolve Phase 4): B2~B7, C1~C9(contracts 키가 없는 이전 하네스는 C를 건너뜀)과
 //   E1 기준(HEAD 또는 --base) 뒤에 더한 변경 이력 행(작업 트리 포함)마다 장치: 또는 장치 없음:
-//   (정보 줄) check: 미정인 출력 칸 수. 종료 코드에는 넣지 않는다
+//   (정보 줄) check: 미정인 출력 칸 수, paths·main이 없어 건너뛴 검사. 종료 코드에는 넣지 않는다
+// route (세션을 넘기기 전, contracts.md 2절 작업 경로): --route a,b+c,d로 준 노드 순서에 C7을 돌린다
 // node (노드 실행 뒤, contracts.md 4절): 에이전트 노드 하나가 계약을 지켰는지
 //   --mark로 실행 전 상태를 남기고, 실행 뒤 같은 --node로 검사한다. --var 이름=값으로 <이름>을 채운다
 //   N1 표시 뒤 바뀐 파일(추적하지 않는 파일 포함, gitignore된 파일 제외)이 모두 writes 안에 있다.
@@ -239,7 +244,7 @@ function loadContracts(root, m, out) {
   let c;
   try { c = JSON.parse(read(p)); } catch (e) { return out('C1', '계약 파일을 JSON으로 읽지 못함: ' + e.message), null; }
   if (!c.nodes || typeof c.nodes !== 'object' || !Object.keys(c.nodes).length) return out('C1', '계약 파일에 nodes가 없다'), null;
-  return c.nodes;
+  return c;
 }
 
 function checkNodeShape(id, n, out) {
@@ -266,8 +271,9 @@ function checkNodeShape(id, n, out) {
 }
 
 function checkContracts(root, m, out) {
-  const nodes = loadContracts(root, m, out);
-  if (!nodes) return;
+  const c = loadContracts(root, m, out);
+  if (!c) return;
+  const nodes = c.nodes;
   for (const [id, n] of Object.entries(nodes)) {
     if (!n || typeof n !== 'object' || Array.isArray(n)) { out('C1', id + ': 노드가 객체가 아니다'); delete nodes[id]; continue; }
     checkNodeShape(id, n, out);
@@ -303,6 +309,58 @@ function checkContracts(root, m, out) {
     }
   }
   if (!Object.values(nodes).some((n) => n.kind === 'human')) out('C6', '사람 게이트(kind: human) 노드가 없다');
+  checkPaths(nodes, c.paths, out);
+  if (c.main !== undefined) {
+    if (!strs(c.main)) out('C1', 'main은 경로 배열이어야 한다');
+    else for (const f of unowned(root, m, nodes, c.main)) out('C9', '담당 노드가 없는 파일이다(writes나 main에 더함): ' + f);
+  }
+}
+
+const listed = (x) => (isObj(x) && Array.isArray(x.parallel) ? x.parallel : []);
+
+// 경로 하나: 원소(노드 id 또는 함께 도는 묶음)마다 필수 입력의 from이 앞 원소에 있다
+function checkRoute(name, route, nodes, out) {
+  const before = new Set();
+  for (const el of route) {
+    const group = Array.isArray(el) ? el : [el];
+    group.forEach((id, k) => {
+      const n = nodes[id];
+      if (!isObj(n)) return out('C7', name + ': 없는 노드다: ' + id);
+      for (const o of group.slice(k + 1)) {
+        if (!listed(n).includes(o) && !listed(nodes[o]).includes(id)) out('C7', name + ': 묶음의 ' + id + '와 ' + o + '가 parallel이 아니다');
+      }
+      for (const i of objs(n.inputs)) {
+        if (i.required === true && typeof i.from === 'string' && !before.has(i.from)) out('C7', name + ': ' + id + '의 필수 입력을 만드는 ' + i.from + '가 앞에 없다: ' + i.path);
+      }
+    });
+    group.forEach((id) => before.add(id));
+  }
+}
+
+function checkPaths(nodes, paths, out) {
+  if (paths === undefined) return;
+  const ok = isObj(paths) && Object.values(paths).every((r) => Array.isArray(r) && r.length && r.every((e) => typeof e === 'string' || (strs(e) && e.length)));
+  if (!ok) return out('C1', 'paths는 {경로 이름: [노드 id 또는 [노드 id, …]]}이어야 한다');
+  for (const [name, route] of Object.entries(paths)) checkRoute(name, route, nodes, out);
+  const used = new Set(Object.values(paths).flat(2));
+  for (const id of Object.keys(nodes)) if (!used.has(id)) out('C8', '어느 경로에도 없는 노드다: ' + id);
+}
+
+// 하네스 문서가 `경로`로 가리키는 추적 파일 가운데 writes·main 어디에도 없는 것
+function unowned(root, m, nodes, main) {
+  let tracked;
+  try { tracked = git(root, ['-c', 'core.quotepath=false', 'ls-files']).split('\n').filter(Boolean); } catch { return []; }
+  const own = [...Object.values(nodes).flatMap((n) => (strs(n.writes) ? n.writes : [])), ...main].map((w) => toRegex(w));
+  const skip = (f) => f.startsWith('.claude/') || f === m.frame || f === m.changelog || f.startsWith(m.changelog + '/');
+  const set = new Set(tracked);
+  const refs = new Set();
+  for (const f of tracked.filter((f) => f.startsWith('.claude/') && f.endsWith('.md'))) {
+    for (const [, p] of read(join(root, f)).matchAll(/`([^`\s]+)`/g)) {
+      const q = p.replace(/:\d[\d,-]*$/, '');
+      if (set.has(q) && !skip(q)) refs.add(q);
+    }
+  }
+  return [...refs].filter((f) => !own.some((r) => r.test(f))).sort();
 }
 
 export function undecided(root) {
@@ -310,7 +368,7 @@ export function undecided(root) {
   const p = join(root, '.claude', 'harness.json');
   if (!existsSync(p)) return null;
   let m; try { m = JSON.parse(read(p)); } catch { return null; }
-  const nodes = m.contracts && existsSync(join(root, m.contracts)) ? loadContracts(root, m, out) : null;
+  const nodes = m.contracts && existsSync(join(root, m.contracts)) ? loadContracts(root, m, out)?.nodes : null;
   if (!nodes) return null;
   return Object.values(nodes).filter(isObj).flatMap((n) => objs(n.outputs)).filter((o) => o.check === '미정').length;
 }
@@ -347,6 +405,18 @@ function nodeOf(root, id) {
   try { const m = JSON.parse(read(join(root, '.claude', 'harness.json'))); return JSON.parse(read(join(root, m.contracts))).nodes?.[id]; } catch { return undefined; }
 }
 
+// evolve 정보 줄: paths·main이 없어 건너뛴 검사
+export function skipped(root) {
+  const p = join(root, '.claude', 'harness.json');
+  let m, c;
+  try { m = JSON.parse(read(p)); c = JSON.parse(read(join(root, m.contracts))); } catch { return []; }
+  if (!isObj(c?.nodes)) return [];
+  const lines = [];
+  if (c.paths === undefined) lines.push('계약에 paths가 없어 경로 검사(C7·C8)를 건너뜀');
+  if (c.main === undefined) lines.push('계약에 main이 없어 C9를 건너뜀(담당 없는 파일 ' + unowned(root, m, Object.fromEntries(Object.entries(c.nodes).filter(([, n]) => isObj(n))), []).length + '개)');
+  return lines;
+}
+
 export function mark(root, id) {
   const head = git(root, ['rev-parse', 'HEAD']).trim();
   const p = markPath(root, id);
@@ -358,7 +428,7 @@ export function mark(root, id) {
 function checkNode(root, id, vars, out) {
   const m = loadManifest(root, out);
   if (!m) return;
-  const nodes = loadContracts(root, m, out);
+  const nodes = loadContracts(root, m, out)?.nodes;
   if (!nodes) return;
   const n = nodes[id];
   if (!n || n.kind !== 'agent') return out('N1', '에이전트 노드가 아니다: ' + id);
@@ -370,7 +440,6 @@ function checkNode(root, id, vars, out) {
   try { before = JSON.parse(read(markPath(root, id))); } catch { return out('N1', '실행 전 표시가 없다(--mark를 먼저 돌림): ' + id); }
   const writes = (n.writes ?? []).map((w) => toRegex(w, vars));
   // 함께 도는 노드(parallel, 어느 쪽에 적었든)의 writes는 그 노드의 검사가 본다
-  const listed = (x) => (Array.isArray(x?.parallel) ? x.parallel : []);
   const peers = new Set([...listed(n), ...Object.keys(nodes).filter((k) => listed(nodes[k]).includes(id))]);
   const others = [...peers].flatMap((o) => nodes[o]?.writes ?? []).map((w) => toRegex(w, vars));
   const now = dirty(root, before.head);
@@ -422,10 +491,15 @@ function checkEvolve(root, m, base, out) {
   }
 }
 
-export function check(stage, root, base = 'HEAD', { node, vars = {} } = {}) {
+export function check(stage, root, base = 'HEAD', { node, vars = {}, route } = {}) {
   const found = [];
   const out = (id, msg) => found.push(id + ': ' + msg);
   if (stage === 'node') checkNode(root, node, vars, out);
+  else if (stage === 'route') {
+    const m = loadManifest(root, out);
+    const c = m && loadContracts(root, m, out);
+    if (c) checkRoute('route', route, c.nodes, out);
+  }
   else if (stage === 'evolve') {
     const m = loadManifest(root, out);
     checkEvolve(root, m, base, out);
@@ -451,15 +525,21 @@ if (process.argv[1] && resolve(process.argv[1]).toLowerCase() === fileURLToPath(
   const base = opt('--base') ?? 'HEAD';
   const node = opt('--node');
   const doMark = flag('--mark');
-  if (!['design', 'build', 'evolve', 'node'].includes(stage) || (stage === 'node' && !node)) {
+  const route = opt('--route')?.split(',').filter(Boolean).map((e) => (e.includes('+') ? e.split('+') : e));
+  if (!['design', 'build', 'evolve', 'node', 'route'].includes(stage) || (stage === 'node' && !node) || (stage === 'route' && !route?.length)) {
     console.error('사용: node check-harness.mjs --stage <design|build|evolve> [--base <커밋>] [프로젝트 루트]');
     console.error('      node check-harness.mjs --stage node --node <id> [--mark] [--var 이름=값 ...] [프로젝트 루트]');
+    console.error('      node check-harness.mjs --stage route --route <id,id+id,...> [프로젝트 루트]');
     process.exit(2);
   }
   const root = resolve(args[0] ?? '.');
   if (doMark) { console.log('표시: ' + mark(root, node)); process.exit(0); }
-  const found = check(stage, root, base, { node, vars });
+  const found = check(stage, root, base, { node, vars, route });
   for (const f of found) console.log(f);
-  if (stage === 'evolve') { const u = undecided(root); if (u != null) console.log('정보: check가 미정인 출력 ' + u + '개'); }
+  if (stage === 'evolve') {
+    const u = undecided(root);
+    if (u != null) console.log('정보: check가 미정인 출력 ' + u + '개');
+    for (const l of skipped(root)) console.log('정보: ' + l);
+  }
   process.exit(found.length ? 1 : 0);
 }

@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { check, mark, undecided } from './check-harness.mjs';
+import { check, mark, undecided, skipped } from './check-harness.mjs';
 
 const tmp = mkdtempSync(join(tmpdir(), 'check-harness-'));
 after(() => rmSync(tmp, { recursive: true, force: true }));
@@ -343,4 +343,46 @@ test('형식 오류 원소: outputs가 객체, outputs·inputs에 null', () => {
   const root = gitProject(contractsWith((n) => { n.write.outputs = [null]; }));
   mark(root, 'write');
   assert.deepEqual(ids(check('node', root, 'HEAD', { node: 'write' })), ['C1']);
+});
+
+const withPaths = (paths, fn = () => {}) => { const c = structuredClone(CONTRACTS); c.paths = paths; fn(c); return { '.claude/contracts.json': JSON.stringify(c) }; };
+
+test('C7: 경로의 필수 입력은 앞 노드나 from: null에서 온다', () => {
+  assert.deepEqual(check('build', project(withPaths({ new: ['plan', 'write', 'review'], again: ['plan', 'write', 'review', 'write', 'review'] }))), []);
+  // 다시 쓰기 경로가 write 없이 review부터 시작한다(B-025 꼴)
+  assert.deepEqual(ids(check('build', project(withPaths({ new: ['plan', 'write', 'review'], rewrite: ['review'] })))), ['C7']);
+  // from: null인 필수 입력과 required: false 입력은 경로와 무관하게 통과
+  assert.deepEqual(check('build', project(withPaths({ new: ['plan', 'write', 'review'], rewrite: ['review'] }, (c) => { c.nodes.review.inputs[0].from = null; }))), []);
+  assert.deepEqual(check('build', project(withPaths({ new: ['plan', 'write', 'review'], rewrite: ['review'] }, (c) => { c.nodes.review.inputs[0].required = false; }))), []);
+  assert.deepEqual(ids(check('build', project(withPaths({ new: ['plan', 'write', 'ghost', 'review'] })))), ['C7']);
+});
+
+test('C7: 묶음은 parallel이어야 하고 묶음 안 노드는 앞 노드로 치지 않는다', () => {
+  assert.deepEqual(ids(check('build', project(withPaths({ new: ['plan', ['write', 'review']] })))), ['C7', 'C7']);
+  const par = (c) => { c.nodes.review.parallel = ['write']; c.nodes.review.inputs[0].from = null; };
+  assert.deepEqual(check('build', project(withPaths({ new: ['plan', ['write', 'review']] }, par))), []);
+});
+
+test('C8·C1: 경로 밖 노드, paths 형식, paths가 없으면 건너뜀', () => {
+  assert.deepEqual(ids(check('build', project(withPaths({ new: ['plan', 'write'] })))), ['C8']);
+  assert.deepEqual(ids(check('build', project(withPaths({ new: [] })))), ['C1']);
+  assert.deepEqual(ids(check('build', project(withPaths(['plan'])))), ['C1']);
+  assert.deepEqual(check('build', project()), []);
+});
+
+test('route: 넘김 문서의 다음 단계 목록에 C7', () => {
+  const root = project();
+  assert.deepEqual(check('route', root, 'HEAD', { route: ['plan', 'write', 'review'] }), []);
+  assert.deepEqual(ids(check('route', root, 'HEAD', { route: ['review', 'write'] })), ['C7', 'C7']);
+});
+
+test('C9: 하네스 문서가 가리키는 추적 파일의 담당, main이 없으면 건너뜀', () => {
+  const doc = { '.claude/skills/orch/SKILL.md': ORCH + '\n규칙은 `docs/rules.md:3`, 빌드는 `scripts/build.mjs`, 결과는 `out/a.md`', 'docs/rules.md': 'x', 'scripts/build.mjs': '', 'out/a.md': '' };
+  const withMain = (main) => withPaths({ new: ['plan', 'write', 'review'] }, (c) => { c.main = main; });
+  assert.deepEqual(check('evolve', gitProject({ ...doc, ...withMain(['docs/rules.md', 'scripts/**']) })), []);
+  assert.deepEqual(check('evolve', gitProject({ ...doc, ...withMain(['docs/rules.md']) })), ['C9: 담당 노드가 없는 파일이다(writes나 main에 더함): scripts/build.mjs']);
+  assert.deepEqual(ids(check('build', project({ ...doc, ...withMain('docs/**') }))), ['C1']);
+  const old = gitProject(doc);
+  assert.deepEqual(check('evolve', old), []);
+  assert.deepEqual(skipped(old), ['계약에 paths가 없어 경로 검사(C7·C8)를 건너뜀', '계약에 main이 없어 C9를 건너뜀(담당 없는 파일 2개)']);
 });
