@@ -31,6 +31,7 @@
 //   --mark로 실행 전 상태를 남기고, 실행 뒤 같은 --node로 검사한다. --var 이름=값으로 <이름>을 채운다
 //   N1 표시 뒤 바뀐 파일(추적하지 않는 파일 포함, gitignore된 파일 제외)이 모두 writes 안에 있다.
 //      parallel 노드의 writes는 그 노드가 본다. 같은 작업 트리라 함께 도는 노드끼리 서로의 writes에 쓴 것은 가르지 못한다(C5는 겹침만 막음)
+//   (먼저) 노드의 계약 칸 형식이 틀리면 C1으로 보고하고 멈춘다
 //   N2 필수 출력이 표시 뒤 생기거나 바뀌었고, check가 "형식:"이면 그 제목(md)이나 최상위 키(json)가 있다
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
@@ -88,7 +89,7 @@ function gitItems() {
 
 function walk(dir) {
   if (!existsSync(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+  return readdirSync(dir, { withFileTypes: true }).filter((e) => e.name !== '.git').flatMap((e) =>
     e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]);
 }
 
@@ -226,6 +227,9 @@ function overlap(p, q) {
   if (b === q) return toRegex(p).test(q);
   return a.startsWith(b) || b.startsWith(a);
 }
+const isObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
+// 배열 칸에서 객체인 원소만(형식 오류는 checkNodeShape가 C1으로 보고한다)
+const objs = (v) => (Array.isArray(v) ? v.filter(isObj) : []);
 const strs = (v) => Array.isArray(v) && v.every((x) => typeof x === 'string');
 
 function loadContracts(root, m, out) {
@@ -243,12 +247,12 @@ function checkNodeShape(id, n, out) {
   if (!['agent', 'human'].includes(n.kind)) return bad('kind는 agent | human이어야 한다');
   if (!Array.isArray(n.inputs)) bad('inputs 배열이 없다');
   else for (const i of n.inputs) {
-    if (typeof i.path !== 'string' || !(typeof i.from === 'string' || i.from === null) || typeof i.required !== 'boolean')
+    if (!isObj(i) || typeof i.path !== 'string' || !(typeof i.from === 'string' || i.from === null) || typeof i.required !== 'boolean')
       bad('입력마다 path, from(노드 id 또는 null), required(true|false)가 있어야 한다');
   }
   if (!Array.isArray(n.outputs) || !n.outputs.length) bad('outputs가 비었다');
   else for (const o of n.outputs) {
-    if (typeof o.path !== 'string' || typeof o.check !== 'string' || !o.check.trim()) bad('출력마다 path와 check(미정 | 형식: … | 명령)가 있어야 한다');
+    if (!isObj(o) || typeof o.path !== 'string' || typeof o.check !== 'string' || !o.check.trim()) bad('출력마다 path와 check(미정 | 형식: … | 명령)가 있어야 한다');
   }
   if (n.kind === 'human') return;
   if (typeof n.agent !== 'string' || !n.agent) bad('agent가 없다');
@@ -256,7 +260,7 @@ function checkNodeShape(id, n, out) {
   if (!strs(n.delegated)) bad('delegated 배열이 없다(비어 있어도 둔다)');
   if (!n.stop || !strs(n.stop.contract) || !strs(n.stop.premise)) bad('stop.contract, stop.premise 배열이 없다(비어 있어도 둔다)');
   if (n.parallel !== undefined && !strs(n.parallel)) bad('parallel은 노드 id 배열이어야 한다');
-  for (const o of n.outputs ?? []) {
+  for (const o of objs(n.outputs)) {
     if (typeof o.path === 'string' && !n.writes.some((w) => toRegex(w).test(sample(o.path)))) bad('출력이 writes 밖이다: ' + o.path);
   }
 }
@@ -285,11 +289,11 @@ function checkContracts(root, m, out) {
     if (n.skill && !existsSync(join(root, '.claude', 'skills', n.skill, 'SKILL.md'))) out('C2', id + ': 스킬이 없다: .claude/skills/' + n.skill);
   }
   for (const [id, n] of Object.entries(nodes)) {
-    for (const i of Array.isArray(n.inputs) ? n.inputs : []) {
+    for (const i of objs(n.inputs)) {
       if (typeof i.from !== 'string') continue;
       const p = nodes[i.from];
       if (!p) out('C3', id + ': 입력의 from이 없는 노드다: ' + i.from);
-      else if (!(p.outputs ?? []).some((o) => typeof o.path === 'string' && samePath(o.path, i.path))) out('C3', id + ': ' + i.from + '의 출력에 입력 경로가 없다: ' + i.path);
+      else if (!objs(p.outputs).some((o) => typeof o.path === 'string' && samePath(o.path, i.path))) out('C3', id + ': ' + i.from + '의 출력에 입력 경로가 없다: ' + i.path);
     }
     for (const o of strs(n.parallel) ? n.parallel : []) {
       const q = nodes[o];
@@ -308,7 +312,7 @@ export function undecided(root) {
   let m; try { m = JSON.parse(read(p)); } catch { return null; }
   const nodes = m.contracts && existsSync(join(root, m.contracts)) ? loadContracts(root, m, out) : null;
   if (!nodes) return null;
-  return Object.values(nodes).flatMap((n) => n.outputs ?? []).filter((o) => o.check === '미정').length;
+  return Object.values(nodes).filter(isObj).flatMap((n) => objs(n.outputs)).filter((o) => o.check === '미정').length;
 }
 
 // 노드 실행 전후 비교: 표시는 .git 안(git rev-parse --git-path)에 둬 작업 트리 변경으로 잡히지 않게 한다
@@ -325,10 +329,13 @@ const markPath = (root, id) => resolve(root, git(root, ['rev-parse', '--git-path
 // 출력 경로에 맞는 파일과 내용 해시. gitignore된 폴더(_workspace/)의 출력도 보도록 git 목록을 쓰지 않는다
 function outputFiles(root, n, vars = {}) {
   const out = {};
-  for (const o of n?.outputs ?? []) {
+  for (const o of objs(n?.outputs)) {
     if (typeof o.path !== 'string') continue;
+    // 와일드카드가 없는 경로는 그 파일만 본다. 고정 접두가 폴더를 가리키지 못하면 루트 전체를 훑는다
+    const files = literalPrefix(o.path) === o.path ? [join(root, o.path)].filter((f) => existsSync(f) && statSync(f).isFile())
+      : walk(join(root, dirname(literalPrefix(o.path) + 'x')));
     const re = toRegex(o.path, vars);
-    for (const f of walk(join(root, dirname(literalPrefix(o.path) + 'x')))) {
+    for (const f of files) {
       const rel = f.slice(root.length + 1).replace(/\\/g, '/');
       if (re.test(rel)) out[rel] = createHash('sha1').update(readFileSync(f)).digest('hex');
     }
@@ -355,6 +362,10 @@ function checkNode(root, id, vars, out) {
   if (!nodes) return;
   const n = nodes[id];
   if (!n || n.kind !== 'agent') return out('N1', '에이전트 노드가 아니다: ' + id);
+  // 계약 칸 형식이 틀리면 노드 검사를 하지 않고 build와 같은 C1으로 보고한다
+  const shape = [];
+  checkNodeShape(id, n, (k, msg) => shape.push(msg));
+  if (shape.length) return shape.forEach((msg) => out('C1', msg));
   let before;
   try { before = JSON.parse(read(markPath(root, id))); } catch { return out('N1', '실행 전 표시가 없다(--mark를 먼저 돌림): ' + id); }
   const writes = (n.writes ?? []).map((w) => toRegex(w, vars));
@@ -369,7 +380,7 @@ function checkNode(root, id, vars, out) {
   }
   const outNow = outputFiles(root, n, vars);
   const fresh = Object.keys(outNow).filter((f) => outNow[f] !== (before.outputs ?? {})[f]);
-  for (const o of (n.outputs ?? []).filter((o) => o.required !== false)) {
+  for (const o of objs(n.outputs).filter((o) => o.required !== false)) {
     const re = toRegex(o.path, vars);
     const found = fresh.filter((f) => re.test(f));
     if (!found.length) { out('N2', '필수 출력이 표시 뒤 생기거나 바뀌지 않았다: ' + o.path); continue; }
