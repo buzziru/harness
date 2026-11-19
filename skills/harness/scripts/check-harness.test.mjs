@@ -307,3 +307,12 @@ test('2라운드 반영: gitignore된 폴더의 출력, 한쪽에만 적은 para
   assert.deepEqual(check('node', root, 'HEAD', { node: 'review' }), []);
   assert.deepEqual(check('node', root, 'HEAD', { node: 'write' }), []);
 });
+
+test('3라운드 반영: 객체가 아닌 노드가 있어도 node 단계가 멈추지 않는다, parallel 형식', () => {
+  const root = gitProject(contractsWith((n) => { n.x = null; }));
+  mark(root, 'write');
+  mkdirSync(join(root, 'out'), { recursive: true });
+  writeFileSync(join(root, 'out/a.md'), '## 요약');
+  assert.deepEqual(check('node', root, 'HEAD', { node: 'write' }), []);
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.write.parallel = 'review'; })))), ['C1']);
+});

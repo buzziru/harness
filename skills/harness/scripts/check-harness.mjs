@@ -255,6 +255,7 @@ function checkNodeShape(id, n, out) {
   if (!strs(n.writes) || !n.writes.length) return bad('writes가 비었다');
   if (!strs(n.delegated)) bad('delegated 배열이 없다(비어 있어도 둔다)');
   if (!n.stop || !strs(n.stop.contract) || !strs(n.stop.premise)) bad('stop.contract, stop.premise 배열이 없다(비어 있어도 둔다)');
+  if (n.parallel !== undefined && !strs(n.parallel)) bad('parallel은 노드 id 배열이어야 한다');
   for (const o of n.outputs ?? []) {
     if (typeof o.path === 'string' && !n.writes.some((w) => toRegex(w).test(sample(o.path)))) bad('출력이 writes 밖이다: ' + o.path);
   }
@@ -290,7 +291,7 @@ function checkContracts(root, m, out) {
       if (!p) out('C3', id + ': 입력의 from이 없는 노드다: ' + i.from);
       else if (!(p.outputs ?? []).some((o) => typeof o.path === 'string' && samePath(o.path, i.path))) out('C3', id + ': ' + i.from + '의 출력에 입력 경로가 없다: ' + i.path);
     }
-    for (const o of n.parallel ?? []) {
+    for (const o of strs(n.parallel) ? n.parallel : []) {
       const q = nodes[o];
       if (!q) { out('C5', id + ': parallel이 없는 노드다: ' + o); continue; }
       const hit = (n.writes ?? []).find((w) => (q.writes ?? []).some((v) => overlap(w, v)));
@@ -358,7 +359,8 @@ function checkNode(root, id, vars, out) {
   try { before = JSON.parse(read(markPath(root, id))); } catch { return out('N1', '실행 전 표시가 없다(--mark를 먼저 돌림): ' + id); }
   const writes = (n.writes ?? []).map((w) => toRegex(w, vars));
   // 함께 도는 노드(parallel, 어느 쪽에 적었든)의 writes는 그 노드의 검사가 본다
-  const peers = new Set([...(n.parallel ?? []), ...Object.keys(nodes).filter((k) => (nodes[k].parallel ?? []).includes(id))]);
+  const listed = (x) => (Array.isArray(x?.parallel) ? x.parallel : []);
+  const peers = new Set([...listed(n), ...Object.keys(nodes).filter((k) => listed(nodes[k]).includes(id))]);
   const others = [...peers].flatMap((o) => nodes[o]?.writes ?? []).map((w) => toRegex(w, vars));
   const now = dirty(root, before.head);
   const changed = [...new Set([...Object.keys(now), ...Object.keys(before.files)])].filter((f) => (now[f] ?? null) !== (before.files[f] ?? null));
