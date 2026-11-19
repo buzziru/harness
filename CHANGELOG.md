@@ -4,6 +4,14 @@
 
 ## [Unreleased] (로컬 포크)
 
+## [2.1.0-local.12] - 2026-11-19 (로컬 포크)
+
+### Changed
+
+- **노드 검사 범위** (`scripts/check-harness.mjs`, `references/contracts.md` 2절) — 와일드카드가 없는 출력 경로는 그 파일만 보고, 파일 찾기에서 `.git`을 뺌. 루트에 바로 놓인 고정 파일도 루트 전체를 훑던 것을 없앰. 고정 접두에 폴더가 없는 경로는 여전히 루트 전체를 훑으므로 출력 경로를 고정 폴더로 시작하게 쓰라는 안내를 더함
+- **계약 형식 오류** (`scripts/check-harness.mjs`) — `node` 단계는 노드의 계약 칸 형식이 틀리면 C1으로 보고하고 멈춤. `inputs`·`outputs`가 배열이 아니거나 객체가 아닌 원소를 담아도 `build`·`node` 단계와 `--mark`가 예외로 멈추지 않고 C1으로 보고함
+- **버전 정합성** — `plugin.json`·`marketplace.json`·README 뱃지(EN/KO)를 2.1.0-local.12로
+
 ## [2.1.0-local.11] - 2026-11-19 (로컬 포크)
 
 ### Added

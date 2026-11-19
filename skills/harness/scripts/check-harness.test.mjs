@@ -316,3 +316,31 @@ test('3라운드 반영: 객체가 아닌 노드가 있어도 node 단계가 멈
   assert.deepEqual(check('node', root, 'HEAD', { node: 'write' }), []);
   assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.write.parallel = 'review'; })))), ['C1']);
 });
+
+test('노드 검사 범위: 루트의 고정 경로 출력, node 단계의 계약 형식 오류', () => {
+  const root = gitProject(contractsWith((n) => { n.write.outputs.push({ path: 'report.md', check: '미정' }); n.write.writes.push('report.md'); }));
+  mark(root, 'write');
+  mkdirSync(join(root, 'out'), { recursive: true });
+  writeFileSync(join(root, 'out/a.md'), '## 요약');
+  assert.deepEqual(ids(check('node', root, 'HEAD', { node: 'write' })), ['N2']);
+  writeFileSync(join(root, 'report.md'), 'x');
+  assert.deepEqual(check('node', root, 'HEAD', { node: 'write' }), []);
+  const bad = gitProject(contractsWith((n) => { n.write.writes = 'out/**'; }));
+  mark(bad, 'write');
+  assert.deepEqual(ids(check('node', bad, 'HEAD', { node: 'write' })), ['C1']);
+});
+
+test('형식 오류 원소: outputs가 객체, outputs·inputs에 null', () => {
+  for (const fn of [(n) => { n.write.outputs = { path: 'out/a.md', check: '미정' }; }, (n) => { n.write.outputs = [null]; }, (n) => { n.review.inputs = [null]; }]) {
+    assert.ok(ids(check('build', project(contractsWith(fn)))).includes('C1'));
+    const root = gitProject(contractsWith(fn));
+    mark(root, 'write');
+    mark(root, 'review');
+    assert.doesNotThrow(() => check('node', root, 'HEAD', { node: 'write' }));
+    assert.doesNotThrow(() => check('node', root, 'HEAD', { node: 'review' }));
+    assert.doesNotThrow(() => undecided(root));
+  }
+  const root = gitProject(contractsWith((n) => { n.write.outputs = [null]; }));
+  mark(root, 'write');
+  assert.deepEqual(ids(check('node', root, 'HEAD', { node: 'write' })), ['C1']);
+});
