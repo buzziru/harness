@@ -29,12 +29,14 @@
 //   (정보 줄) check: 미정인 출력 칸 수. 종료 코드에는 넣지 않는다
 // node (노드 실행 뒤, contracts.md 4절): 에이전트 노드 하나가 계약을 지켰는지
 //   --mark로 실행 전 상태를 남기고, 실행 뒤 같은 --node로 검사한다. --var 이름=값으로 <이름>을 채운다
-//   N1 표시 뒤 바뀐 파일(추적하지 않는 파일 포함)이 모두 writes 안에 있다. parallel 노드의 writes는 그 노드가 본다
+//   N1 표시 뒤 바뀐 파일(추적하지 않는 파일 포함, gitignore된 파일 제외)이 모두 writes 안에 있다.
+//      parallel 노드의 writes는 그 노드가 본다. 같은 작업 트리라 함께 도는 노드끼리 서로의 writes에 쓴 것은 가르지 못한다(C5는 겹침만 막음)
 //   N2 필수 출력이 표시 뒤 생기거나 바뀌었고, check가 "형식:"이면 그 제목(md)이나 최상위 키(json)가 있다
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 const SECTIONS = ['판정 방법', '승인 지점과 자율 범위', '보호 장치', '결정 기록', '사람 검토 지점', 'git·PR 흐름'];
 const USER_SECTIONS = SECTIONS.filter((s) => s !== '결정 기록');
@@ -319,11 +321,29 @@ function dirty(root, head) {
 }
 const markPath = (root, id) => resolve(root, git(root, ['rev-parse', '--git-path', 'harness-marks/' + id + '.json']).trim());
 
+// 출력 경로에 맞는 파일과 내용 해시. gitignore된 폴더(_workspace/)의 출력도 보도록 git 목록을 쓰지 않는다
+function outputFiles(root, n, vars = {}) {
+  const out = {};
+  for (const o of n?.outputs ?? []) {
+    if (typeof o.path !== 'string') continue;
+    const re = toRegex(o.path, vars);
+    for (const f of walk(join(root, dirname(literalPrefix(o.path) + 'x')))) {
+      const rel = f.slice(root.length + 1).replace(/\\/g, '/');
+      if (re.test(rel)) out[rel] = createHash('sha1').update(readFileSync(f)).digest('hex');
+    }
+  }
+  return out;
+}
+
+function nodeOf(root, id) {
+  try { const m = JSON.parse(read(join(root, '.claude', 'harness.json'))); return JSON.parse(read(join(root, m.contracts))).nodes?.[id]; } catch { return undefined; }
+}
+
 export function mark(root, id) {
   const head = git(root, ['rev-parse', 'HEAD']).trim();
   const p = markPath(root, id);
   mkdirSync(dirname(p), { recursive: true });
-  writeFileSync(p, JSON.stringify({ head, files: dirty(root, head) }));
+  writeFileSync(p, JSON.stringify({ head, files: dirty(root, head), outputs: outputFiles(root, nodeOf(root, id)) }));
   return p;
 }
 
@@ -337,17 +357,19 @@ function checkNode(root, id, vars, out) {
   let before;
   try { before = JSON.parse(read(markPath(root, id))); } catch { return out('N1', '실행 전 표시가 없다(--mark를 먼저 돌림): ' + id); }
   const writes = (n.writes ?? []).map((w) => toRegex(w, vars));
-  // 함께 도는 노드(parallel)의 writes는 그 노드의 검사가 본다
-  const others = (n.parallel ?? []).flatMap((o) => nodes[o]?.writes ?? []).map((w) => toRegex(w, vars));
+  // 함께 도는 노드(parallel, 어느 쪽에 적었든)의 writes는 그 노드의 검사가 본다
+  const peers = new Set([...(n.parallel ?? []), ...Object.keys(nodes).filter((k) => (nodes[k].parallel ?? []).includes(id))]);
+  const others = [...peers].flatMap((o) => nodes[o]?.writes ?? []).map((w) => toRegex(w, vars));
   const now = dirty(root, before.head);
   const changed = [...new Set([...Object.keys(now), ...Object.keys(before.files)])].filter((f) => (now[f] ?? null) !== (before.files[f] ?? null));
   for (const f of changed) {
     if (!writes.some((r) => r.test(f)) && !others.some((r) => r.test(f))) out('N1', 'writes 밖 파일이 바뀌었다: ' + f);
   }
+  const outNow = outputFiles(root, n, vars);
+  const fresh = Object.keys(outNow).filter((f) => outNow[f] !== (before.outputs ?? {})[f]);
   for (const o of (n.outputs ?? []).filter((o) => o.required !== false)) {
     const re = toRegex(o.path, vars);
-    const dir = dirname(literalPrefix(o.path) + 'x');
-    const found = walk(join(root, dir)).map((f) => f.slice(root.length + 1).replace(/\\/g, '/')).filter((f) => re.test(f) && changed.includes(f));
+    const found = fresh.filter((f) => re.test(f));
     if (!found.length) { out('N2', '필수 출력이 표시 뒤 생기거나 바뀌지 않았다: ' + o.path); continue; }
     if (!o.check.startsWith('형식:')) continue;
     const names = o.check.slice(3).split(',').map((s) => s.trim()).filter(Boolean);

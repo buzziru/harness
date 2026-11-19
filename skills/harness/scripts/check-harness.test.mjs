@@ -295,3 +295,15 @@ test('검토 반영: 객체가 아닌 노드·json 출력, 대문자 낱말 속 
   writeFileSync(join(root, 'docs/PLANNING.md'), 'x');
   assert.deepEqual(ids(check('node', root, 'HEAD', { node: 'write' })), ['N2']);
 });
+
+test('2라운드 반영: gitignore된 폴더의 출력, 한쪽에만 적은 parallel', () => {
+  const root = gitProject({ '.gitignore': '_workspace/\n', ...contractsWith((n) => { n.write.parallel = ['review']; }) });
+  mark(root, 'review');
+  mark(root, 'write');
+  mkdirSync(join(root, '_workspace'), { recursive: true });
+  writeFileSync(join(root, '_workspace/01_review.md'), 'x');
+  mkdirSync(join(root, 'out'), { recursive: true });
+  writeFileSync(join(root, 'out/a.md'), '## 요약');
+  assert.deepEqual(check('node', root, 'HEAD', { node: 'review' }), []);
+  assert.deepEqual(check('node', root, 'HEAD', { node: 'write' }), []);
+});
