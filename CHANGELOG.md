@@ -4,6 +4,14 @@
 
 ## [Unreleased] (로컬 포크)
 
+## [2.1.0-local.13] - 2026-11-19 (로컬 포크)
+
+### Added
+
+- **작업 경로** (`references/contracts.md` 2절, `SKILL.md` 5-3, `scripts/check-harness.mjs`) — 계약 파일 최상위 `paths`에 작업 종류마다 노드 순서(배열 원소는 함께 도는 묶음). C7: 경로마다 필수 입력의 `from`이 앞 원소의 노드인지(`from: null`은 통과), 묶음 노드끼리 `parallel`인지. C8: 모든 노드가 경로 하나 이상에 드는지. 새 `--stage route --route a,b+c`로 넘김 문서의 다음 단계 목록에 C7을 돌림. `paths`가 없으면 건너뛰고 evolve 정보 줄로 알림
+- **파일 담당** (`references/contracts.md` 2절, `scripts/check-harness.mjs`) — 계약 파일 최상위 `main`에 메인이 고치는 파일. C9: 하네스 문서가 `경로`로 가리키는 추적 파일이 어느 `writes`에도 `main`에도 없으면 보고. `main`이 없으면 건너뛰고 evolve 정보 줄에 담당 없는 파일 수
+- **버전 정합성** — `plugin.json`·`marketplace.json`·README 뱃지(EN/KO)를 2.1.0-local.13으로
+
 ## [2.1.0-local.12] - 2026-11-19 (로컬 포크)
 
 ### Changed
