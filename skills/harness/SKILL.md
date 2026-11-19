@@ -98,6 +98,10 @@ Harness v2는 Claude Code의 멀티에이전트 기능 세 가지를 사용한�
 
 필요한 전문 지식, 병렬 처리 가능 여부, 유지해야 할 대화 맥락, 다시 쓸 가능성을 기준으로 에이전트를 나눈다. 자세한 표는 `references/team-patterns.md`의 「에이전트 분리 기준」에서 확인한다.
 
+#### 2-4. 노드와 계약 (로컬 추가)
+
+작업 흐름을 노드(에이전트 호출 한 번 또는 사람의 판정 한 번)로 나누고, 노드마다 입력, 출력, 쓰기 범위, 맡긴 판단, 멈춤 조건을 계약 파일 한 곳에 적는다. 기획과 최종 검증은 사람 게이트 노드로 둔다. 사용자가 경계를 다 그리지 못해도 모든 칸을 두고, 판정 기준을 모르는 출력은 `check: 미정`으로 둔다. 칸은 메인이 저장소를 읽고 채우며 사용자에게 묻지 않는다. 계약이 없으면 입력·출력이 에이전트 정의의 문장으로 흩어져, 쓰기 범위가 열린 채 남고 단계 사이의 연결을 검사할 수 없다. 형식, 최소 형식, 실행 때 검사는 `references/contracts.md`다.
+
 ### 3단계: 에이전트 정의 작성
 
 여러 세션에서 재사용할 전문 에이전트는 `프로젝트/.claude/agents/{name}.md` 파일로 정의한다. 반복해서 사용할 역할을 `Agent` 도구의 `prompt`에만 직접 넣지 않는다.
@@ -136,6 +140,8 @@ YAML 프론트매터에는 `name`과 `description`을 반드시 넣는다. 필�
 반대로 산출물을 고치는 에이전트에는 Write와 함께 Edit도 준다. Edit가 없으면 한 줄을 고칠 때도 파일 전체를 다시 써야 하므로, 산출물이 크면 에이전트가 수정을 포기하고 우회한다. 또 `tools`에 적은 도구가 실행할 때 주어지지 않은 사례가 있으므로, 지속형 에이전트에게는 첫 보고에서 실제로 쓸 수 있는 도구 목록을 알리게 한다.
 
 본문에는 핵심 역할, 작업 원칙, 입력·출력 규칙, 오류 처리, 협업 방법을 반드시 적는다. 지속형 에이전트에는 `## 통신 규칙`을 추가해 `SendMessage`를 주고받을 대상과 공유 작업 목록 사용법을 정한다.
+
+(로컬 추가) 입력·출력 규칙은 따로 쓰지 않고 `## 계약` 절에 맡은 노드 id와 반환 다섯 칸(`references/contracts.md` 4절)만 적는다. 입력·출력의 정본은 2-4의 계약 파일이다.
 
 > 정의 템플릿, 전체 예시, `tools`를 제한할 때 주의할 점은 `references/team-patterns.md`의 「에이전트 정의 구조」에서 확인한다.
 
@@ -259,6 +265,7 @@ Claude는 스킬의 `name`과 `description`을 보고 어떤 스킬을 불러올
 - 파일 이름은 `{phase}_{agent}_{artifact}.{ext}` 형식을 쓴다. 예: `01_analyst_requirements.md`
 - 최종 산출물만 사용자가 지정한 경로에 저장한다. `_workspace/`는 사후 검증을 위해 남긴다.
 - (로컬 추가) 원본 데이터에서 나온 내용의 구분, worktree와의 관계, 종료 때 처리는 `references/project-governance.md` 6절을 따른다.
+- (로컬 추가) 노드 사이에 무엇을 어느 경로로 넘기는지는 계약 파일(2-4)이 정본이다. 오케스트레이터는 노드 id로 순서와 승인을 적고 경로를 다시 적지 않는다. 에이전트를 부르기 전후에 노드 검사를 돌린다(`references/contracts.md` 4절).
 
 #### 5-2. 오류 처리
 
@@ -328,7 +335,7 @@ Claude는 스킬의 `name`과 `description`을 보고 어떤 스킬을 불러올
 - 에이전트끼리 서로 참조하는 이름이 일치하는지 확인한다.
 - `.claude/commands/`에 명령 파일을 만들지 않았는지 확인한다.
 - 산출물에 v1 방식인 `TeamCreate`, `TeamDelete`, `team_name`, 실험 기능 플래그가 남지 않았는지 확인한다.
-- (로컬 추가) `node scripts/check-harness.mjs --stage build <프로젝트 루트>`가 0인지 확인한다. 운영 틀 기록과 오케스트레이터·`CLAUDE.md`·변경 이력의 형식을 본다(`references/project-governance.md` 4-1).
+- (로컬 추가) `node scripts/check-harness.mjs --stage build <프로젝트 루트>`가 0인지 확인한다. 운영 틀 기록과 오케스트레이터·`CLAUDE.md`·변경 이력의 형식, 계약 파일의 칸과 노드 연결(C1\~C6)을 본다(`references/project-governance.md` 4-1, `references/contracts.md`).
 
 #### 6-2. 실행 모드별 검증
 
@@ -358,6 +365,7 @@ Claude는 스킬의 `name`과 `description`을 보고 어떤 스킬을 불러올
 - 데이터 전달 경로가 중간에 끊기지 않는지 확인한다.
 - 모든 에이전트의 입력이 앞 단계의 출력과 맞는지 확인한다.
 - 오류가 났을 때 대체 절차를 실제로 실행할 수 있는지 확인한다.
+- (로컬 추가) 데이터 전달 경로와 입력·출력의 연결은 `check-harness.mjs --stage build`의 C3(`from`과 출력 경로), C5(함께 도는 노드의 쓰기 범위)가 판정한다. 모의 실행에서는 순서와 오류 대체 절차만 본다.
 
 #### 6-6. 테스트 시나리오 기록
 
@@ -408,6 +416,7 @@ Claude는 스킬의 `name`과 `description`을 보고 어떤 스킬을 불러올
 - [ ] 스킬을 불러와야 하는 요청과 불러오면 안 되는 경계 사례로 호출 조건을 검증했다.
 - [ ] `CLAUDE.md`에 호출 조건과 변경 이력만 기록했다. (로컬 추가) 변경 이력은 `CLAUDE.md`에 위치만 있고 이력 파일에 있다.
 - [ ] 오케스트레이터의 0단계에서 처음 실행, 후속 실행, 일부 재실행을 구분한다. 워크플로는 재개 옵션도 다룬다.
+- [ ] (로컬 추가) 노드마다 계약(입력, 출력, `writes`, `delegated`, `stop`)이 계약 파일에 있고, 기획·최종 검증이 사람 게이트 노드다. 에이전트 정의는 노드 id만 가리킨다.
 - [ ] (로컬 추가) `node scripts/check-harness.mjs --stage build <프로젝트 루트>`가 0이다. 위의 `model:` 지정, v1 방식, `.claude/commands/`, `SKILL.md` 500줄 줄 가운데 기계로 판정되는 부분과 운영 틀 기록의 형식은 이 명령이 판정한다.
 
 ## 참고 문서
@@ -418,6 +427,7 @@ Claude는 스킬의 `name`과 `description`을 보고 어떤 스킬을 불러올
 - **실전 팀 구성 예시**: `references/team-examples.md`
 - **워크플로 스크립트 예시와 주의 사항**: `references/workflow-recipes.md`
 - **오케스트레이터 템플릿**: `references/orchestrator-template.md`
+- **(로컬 추가) 노드 계약**: `references/contracts.md`
 - **스킬 작성 가이드**: `references/skill-writing-guide.md`
 - **스킬 테스트 가이드**: `references/skill-testing-guide.md`
 - **QA 에이전트 가이드**: `references/qa-agent-guide.md`
