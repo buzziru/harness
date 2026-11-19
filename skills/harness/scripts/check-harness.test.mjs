@@ -250,3 +250,48 @@ test('N1·N2: 실행 전 표시 뒤 writes 밖 변경, 필수 출력, 형식 칸
   assert.deepEqual(node(), ['N1']);
   assert.deepEqual(ids(check('node', root, 'HEAD', { node: 'plan' })), ['N1']);
 });
+
+test('검토 반영: 비ASCII 이름, 표시 뒤 되돌림, parallel, 옛 결과물, 대문자 NN', () => {
+  const root = gitProject({ 'keep.md': '원래', '한글.md': '원래' });
+  writeFileSync(join(root, 'keep.md'), '표시 전에 고침');
+  writeFileSync(join(root, '한글.md'), '표시 전에 고침');
+  mkdirSync(join(root, 'out'), { recursive: true });
+  writeFileSync(join(root, 'out/old.md'), '## 요약\n지난 실행');
+  mark(root, 'write');
+  const node = (vars) => check('node', root, 'HEAD', { node: 'write', vars });
+  assert.deepEqual(ids(node()), ['N2']);
+  writeFileSync(join(root, 'out/보고.md'), '## 요약\n본문');
+  assert.deepEqual(node(), []);
+  execFileSync('git', ['-C', root, 'checkout', '--', 'keep.md']);
+  writeFileSync(join(root, '한글.md'), '실행 중에 또 고침');
+  assert.deepEqual(node().sort(), ['N1: writes 밖 파일이 바뀌었다: keep.md', 'N1: writes 밖 파일이 바뀌었다: 한글.md']);
+});
+
+test('검토 반영: parallel 노드의 산출물은 N1에서 뺀다', () => {
+  const root = gitProject(contractsWith((n) => { n.write.parallel = ['review']; }));
+  mark(root, 'write');
+  mkdirSync(join(root, 'out'), { recursive: true });
+  mkdirSync(join(root, '_workspace'), { recursive: true });
+  writeFileSync(join(root, 'out/a.md'), '## 요약');
+  writeFileSync(join(root, '_workspace/01_review.md'), 'x');
+  assert.deepEqual(check('node', root, 'HEAD', { node: 'write' }), []);
+});
+
+test('검토 반영: evolve는 contracts 키가 없는 이전 하네스에서 C를 건너뛴다', () => {
+  const root = gitProject({ '.claude/harness.json': manifest({ contracts: undefined }) });
+  assert.deepEqual(check('evolve', root), []);
+  assert.deepEqual(ids(check('build', root)), ['C1']);
+});
+
+test('검토 반영: 객체가 아닌 노드·json 출력, 대문자 낱말 속 NN, 노드 id 부분 일치', () => {
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.x = null; })))), ['C1']);
+  assert.deepEqual(ids(check('build', project({ '.claude/skills/orch/SKILL.md': ORCH.replace('plan →', 'planning →') }))), ['C4']);
+  const root = gitProject(contractsWith((n) => { n.write.outputs.push({ path: 'out/meta.json', check: '형식: a' }); n.write.writes.push('docs/PLANNING.md'); }));
+  mark(root, 'write');
+  mkdirSync(join(root, 'out'), { recursive: true });
+  writeFileSync(join(root, 'out/a.md'), '## 요약');
+  writeFileSync(join(root, 'out/meta.json'), 'null');
+  mkdirSync(join(root, 'docs'), { recursive: true });
+  writeFileSync(join(root, 'docs/PLANNING.md'), 'x');
+  assert.deepEqual(ids(check('node', root, 'HEAD', { node: 'write' })), ['N2']);
+});

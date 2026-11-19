@@ -24,13 +24,13 @@
 //   C4 오케스트레이터가 노드 id를 모두 가리키고, 에이전트 정의가 맡은 노드 id를 가리키며 입력·출력 규칙 절을 따로 두지 않는다
 //   C5 parallel로 선언한 두 노드의 writes가 겹치지 않는다
 //   C6 사람 게이트(kind: human) 노드가 하나 이상 있다
-// evolve (evolve Phase 4): B2~B7, C1~C6과
+// evolve (evolve Phase 4): B2~B7, C1~C6(contracts 키가 없는 이전 하네스는 C를 건너뜀)과
 //   E1 기준(HEAD 또는 --base) 뒤에 더한 변경 이력 행(작업 트리 포함)마다 장치: 또는 장치 없음:
 //   (정보 줄) check: 미정인 출력 칸 수. 종료 코드에는 넣지 않는다
 // node (노드 실행 뒤, contracts.md 4절): 에이전트 노드 하나가 계약을 지켰는지
 //   --mark로 실행 전 상태를 남기고, 실행 뒤 같은 --node로 검사한다. --var 이름=값으로 <이름>을 채운다
-//   N1 표시 뒤 바뀐 파일(추적하지 않는 파일 포함)이 모두 writes 안에 있다
-//   N2 필수 출력이 있고, check가 "형식:"이면 그 제목(md)이나 최상위 키(json)가 있다
+//   N1 표시 뒤 바뀐 파일(추적하지 않는 파일 포함)이 모두 writes 안에 있다. parallel 노드의 writes는 그 노드가 본다
+//   N2 필수 출력이 표시 뒤 생기거나 바뀌었고, check가 "형식:"이면 그 제목(md)이나 최상위 키(json)가 있다
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -139,7 +139,7 @@ function checkDesign(root, m, out) {
   }
 }
 
-function checkBuild(root, m, out) {
+function checkBuild(root, m, out, skipNoContracts = false) {
   if (m) {
     const op = join(root, m.orchestrator);
     if (!existsSync(op)) out('B2', '오케스트레이터 파일이 없다: ' + m.orchestrator);
@@ -179,7 +179,7 @@ function checkBuild(root, m, out) {
       else if (!lines.slice(0, sep).join('\n').includes('장치')) out('B6', '변경 이력의 머리(표 앞 설명, 표 머리)에 장치가 없다');
     }
   }
-  if (m) checkContracts(root, m, out);
+  if (m && (m.contracts || !skipNoContracts)) checkContracts(root, m, out);
   if (existsSync(join(root, '.claude', 'commands'))) out('B7', '.claude/commands/가 있다');
   for (const f of walk(join(root, '.claude', 'agents')).filter((f) => f.endsWith('.md'))) {
     const fm = read(f).match(/^---\n([\s\S]*?)\n---/);
@@ -197,6 +197,7 @@ function checkBuild(root, m, out) {
 }
 
 // 계약 경로 패턴: ** 와 * 는 glob, <이름>은 경로 한 칸(--var로 채움), NN은 숫자
+const isNN = (p, i) => p.startsWith('NN', i) && !/[A-Za-z]/.test(p[i - 1] ?? '') && !/[A-Za-z]/.test(p[i + 2] ?? '');
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function toRegex(p, vars = {}) {
   let s = '';
@@ -206,13 +207,15 @@ function toRegex(p, vars = {}) {
     else if (p.startsWith('**', i)) { s += '.*'; i += 2; }
     else if (p[i] === '*') { s += '[^/]*'; i++; }
     else if (j > i) { const k = p.slice(i + 1, j); s += vars[k] != null ? esc(vars[k]) : '[^/]+'; i = j + 1; }
-    else if (p.startsWith('NN', i)) { s += '\\d+'; i += 2; }
+    else if (isNN(p, i)) { s += '\\d+'; i += 2; }
     else { s += esc(p[i]); i++; }
   }
   return new RegExp('^' + s + '$');
 }
-const literalPrefix = (p) => { const i = p.search(/\*|<|NN/); return i < 0 ? p : p.slice(0, i); };
-const sample = (p) => p.replace(/<[^>]+>/g, 'x').replace(/NN/g, '01').replace(/\*+/g, 'x');
+const literalPrefix = (p) => { for (let i = 0; i < p.length; i++) if (p[i] === '*' || p[i] === '<' || isNN(p, i)) return p.slice(0, i); return p; };
+const sample = (p) => p.replace(/<[^>]+>/g, 'x').replace(/(?<![A-Za-z])NN(?![A-Za-z])/g, '01').replace(/\*+/g, 'x');
+// 노드 id는 [\w.-]로 이어지는 낱말 하나로 찾는다(plan이 planning에 걸리지 않게)
+const mentions = (text, id) => new RegExp('(^|[^\\w.-])' + esc(id) + '($|[^\\w.-])').test(text);
 const samePath = (a, b) => a.replace(/<[^>]+>/g, '<>') === b.replace(/<[^>]+>/g, '<>');
 function overlap(p, q) {
   const a = literalPrefix(p), b = literalPrefix(q);
@@ -258,18 +261,21 @@ function checkNodeShape(id, n, out) {
 function checkContracts(root, m, out) {
   const nodes = loadContracts(root, m, out);
   if (!nodes) return;
-  for (const [id, n] of Object.entries(nodes)) checkNodeShape(id, n, out);
+  for (const [id, n] of Object.entries(nodes)) {
+    if (!n || typeof n !== 'object' || Array.isArray(n)) { out('C1', id + ': 노드가 객체가 아니다'); delete nodes[id]; continue; }
+    checkNodeShape(id, n, out);
+  }
   const op = join(root, m.orchestrator);
   const orch = existsSync(op) ? read(op) : '';
   const seen = new Set();
   for (const [id, n] of Object.entries(nodes)) {
-    if (orch && !orch.includes(id)) out('C4', '오케스트레이터가 노드 ' + id + '를 가리키지 않는다');
+    if (orch && !mentions(orch, id)) out('C4', '오케스트레이터가 노드 ' + id + '를 가리키지 않는다');
     if (n.kind !== 'agent' || typeof n.agent !== 'string') continue;
     const ap = join(root, '.claude', 'agents', n.agent + '.md');
     if (!existsSync(ap)) out('C2', id + ': 에이전트 파일이 없다: .claude/agents/' + n.agent + '.md');
     else {
       const text = read(ap);
-      if (!text.includes(id)) out('C4', '에이전트 ' + n.agent + '가 맡은 노드 ' + id + '를 가리키지 않는다');
+      if (!mentions(text, id)) out('C4', '에이전트 ' + n.agent + '가 맡은 노드 ' + id + '를 가리키지 않는다');
       if (/^##+\s*입력·출력 규칙/m.test(text) && !seen.has(n.agent)) out('C4', '에이전트 ' + n.agent + '에 입력·출력 규칙 절이 남았다(계약 파일이 정본)');
       seen.add(n.agent);
     }
@@ -305,8 +311,8 @@ export function undecided(root) {
 // 노드 실행 전후 비교: 표시는 .git 안(git rev-parse --git-path)에 둬 작업 트리 변경으로 잡히지 않게 한다
 function dirty(root, head) {
   const files = [
-    ...git(root, ['diff', '--name-only', '--relative', head]).split('\n'),
-    ...git(root, ['ls-files', '--others', '--exclude-standard']).split('\n'),
+    ...git(root, ['-c', 'core.quotepath=false', 'diff', '--name-only', '--relative', head]).split('\n'),
+    ...git(root, ['-c', 'core.quotepath=false', 'ls-files', '--others', '--exclude-standard']).split('\n'),
   ].filter(Boolean);
   const hash = (f) => existsSync(join(root, f)) ? git(root, ['hash-object', '--', f]).trim() : null;
   return Object.fromEntries([...new Set(files)].map((f) => [f, hash(f)]));
@@ -331,21 +337,24 @@ function checkNode(root, id, vars, out) {
   let before;
   try { before = JSON.parse(read(markPath(root, id))); } catch { return out('N1', '실행 전 표시가 없다(--mark를 먼저 돌림): ' + id); }
   const writes = (n.writes ?? []).map((w) => toRegex(w, vars));
-  for (const [f, h] of Object.entries(dirty(root, before.head))) {
-    if (before.files[f] === h) continue;
-    if (!writes.some((r) => r.test(f))) out('N1', 'writes 밖 파일이 바뀌었다: ' + f);
+  // 함께 도는 노드(parallel)의 writes는 그 노드의 검사가 본다
+  const others = (n.parallel ?? []).flatMap((o) => nodes[o]?.writes ?? []).map((w) => toRegex(w, vars));
+  const now = dirty(root, before.head);
+  const changed = [...new Set([...Object.keys(now), ...Object.keys(before.files)])].filter((f) => (now[f] ?? null) !== (before.files[f] ?? null));
+  for (const f of changed) {
+    if (!writes.some((r) => r.test(f)) && !others.some((r) => r.test(f))) out('N1', 'writes 밖 파일이 바뀌었다: ' + f);
   }
   for (const o of (n.outputs ?? []).filter((o) => o.required !== false)) {
     const re = toRegex(o.path, vars);
     const dir = dirname(literalPrefix(o.path) + 'x');
-    const found = walk(join(root, dir)).map((f) => f.slice(root.length + 1).replace(/\\/g, '/')).filter((f) => re.test(f));
-    if (!found.length) { out('N2', '필수 출력이 없다: ' + o.path); continue; }
+    const found = walk(join(root, dir)).map((f) => f.slice(root.length + 1).replace(/\\/g, '/')).filter((f) => re.test(f) && changed.includes(f));
+    if (!found.length) { out('N2', '필수 출력이 표시 뒤 생기거나 바뀌지 않았다: ' + o.path); continue; }
     if (!o.check.startsWith('형식:')) continue;
     const names = o.check.slice(3).split(',').map((s) => s.trim()).filter(Boolean);
     for (const f of found) {
       const text = read(join(root, f));
       let has;
-      if (f.endsWith('.json')) { let j = {}; try { j = JSON.parse(text); } catch {} has = (k) => k in j; }
+      if (f.endsWith('.json')) { let j = null; try { j = JSON.parse(text); } catch {} has = (k) => j !== null && typeof j === 'object' && !Array.isArray(j) && k in j; }
       else has = (k) => new RegExp('^#+\\s+' + esc(k) + '\\s*$', 'm').test(text);
       const miss = names.filter((k) => !has(k));
       if (miss.length) out('N2', f + ': 형식 칸이 없다: ' + miss.join(', '));
@@ -385,7 +394,7 @@ export function check(stage, root, base = 'HEAD', { node, vars = {} } = {}) {
   else if (stage === 'evolve') {
     const m = loadManifest(root, out);
     checkEvolve(root, m, base, out);
-    checkBuild(root, m, out);
+    checkBuild(root, m, out, true);
   } else {
     const m = loadManifest(root, out);
     if (m) checkDesign(root, m, out);
