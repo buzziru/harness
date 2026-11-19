@@ -4,6 +4,21 @@
 
 ## [Unreleased] (로컬 포크)
 
+## [2.1.0-local.11] - 2026-11-19 (로컬 포크)
+
+### Added
+
+- **노드 계약** (`skills/harness/references/contracts.md`, `SKILL.md` 2-4) — 작업 흐름을 노드(에이전트 호출 또는 사람 판정)로 나누고 노드마다 입력, 출력(`check`: 미정 | 형식 | 명령), 쓰기 범위 `writes`, 맡긴 판단 `delegated`, 멈춤 `stop.contract`·`stop.premise`를 계약 파일(JSON) 한 곳에 둔다. 기획과 최종 검증은 사람 게이트 노드. 모르는 칸도 `미정`으로 두는 최소 형식, 반환 다섯 칸, 최종 게이트 보고의 고정 칸 셋, evolve가 계약을 고치는 경로
+- **계약 검사** (`scripts/check-harness.mjs`) — `--stage build`에 C1\~C6(계약 칸, 에이전트·스킬 파일, `from`과 출력 경로 연결, 오케스트레이터·에이전트가 노드 id를 가리킴, `parallel` 노드의 쓰기 범위 겹침, 사람 게이트). 새 `--stage node --node <id>`(`--mark`로 실행 전 상태를 남기고 실행 뒤 N1 쓰기 범위 밖 변경, N2 필수 출력·형식 칸). `--stage evolve`는 `check: 미정` 출력 수를 정보 줄로. 단위 시험 추가
+
+### Changed
+
+- **에이전트 정의의 입력·출력 규칙** (`SKILL.md` 3단계, `references/team-patterns.md` 5절) — `## 계약` 절에 노드 id와 반환 칸만. 입력·출력의 정본은 계약 파일
+- **데이터 전달·모의 실행** (`SKILL.md` 5-1, 6-1, 6-5, 점검표, `references/orchestrator-template.md` 원칙 10) — 오케스트레이터는 노드 id로 순서·분기·승인만, 부르기 전후 노드 검사. 연결 점검은 C3·C5가 판정
+- **판단을 둘 곳** (`references/project-governance.md` 2·4·4-1절, 8-1 표) — 경계는 계약, 판정 가능한 것은 검증, 취향·방향은 결정 파일, 나머지만 규칙 문장. 사람 게이트를 남는 최종 상태로, 중간 노드 승인 지점을 빼는 조건. `harness.json`에 `contracts` 키
+- **evolve** (Phase 1의 7, Phase 3, Phase 4) — 게이트 기록을 입력으로, 경계 항목은 계약 칸을 먼저 고침, `미정` 수를 보고
+- **버전 정합성** — `plugin.json`·`marketplace.json`·README 뱃지(EN/KO)를 2.1.0-local.11로
+
 ## [2.1.0-local.10] - 2026-11-18 (로컬 포크)
 
 ### Changed
