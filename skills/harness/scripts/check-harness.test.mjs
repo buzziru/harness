@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { check } from './check-harness.mjs';
+import { check, mark, undecided } from './check-harness.mjs';
 
 const tmp = mkdtempSync(join(tmpdir(), 'check-harness-'));
 after(() => rmSync(tmp, { recursive: true, force: true }));
@@ -28,20 +28,43 @@ const FRAME = [
 const ORCH = [
   '---', 'name: orch', 'description: x', '---',
   '| 규모 | 경로 |', '| --- | --- |', '| 문구 | 생성, 검증 |', '',
-  '| 사용자에게 묻는다 | 메인이 정한다 |', '| --- | --- |', '| 배포 | 경로 이름 |',
+  '| 사용자에게 묻는다 | 메인이 정한다 |', '| --- | --- |', '| 배포 | 경로 이름 |', '',
+  '노드: plan → write → review',
 ].join('\n');
+
+const CONTRACTS = {
+  nodes: {
+    plan: { kind: 'human', inputs: [], outputs: [{ path: 'docs/plan.md', check: '미정' }] },
+    write: {
+      kind: 'agent', agent: 'a',
+      inputs: [{ path: 'docs/plan.md', from: 'plan', required: true }],
+      outputs: [{ path: 'out/<slug>.md', check: '형식: 요약' }],
+      writes: ['out/**'], delegated: [], stop: { contract: [], premise: [] },
+    },
+    review: {
+      kind: 'agent', agent: 'a',
+      inputs: [{ path: 'out/<name>.md', from: 'write', required: true }],
+      outputs: [{ path: '_workspace/NN_review.md', check: '미정' }],
+      writes: ['_workspace/**'], delegated: ['지적 묶기'], stop: { contract: [], premise: ['계획 전제와 어긋남'] },
+    },
+  },
+};
+const contractsWith = (fn) => { const c = structuredClone(CONTRACTS); fn(c.nodes); return { '.claude/contracts.json': JSON.stringify(c) }; };
+const manifest = (over = {}) => JSON.stringify({ frame: 'docs/harness/frame.md', orchestrator: '.claude/skills/orch/SKILL.md', changelog: 'docs/harness/CHANGELOG.md', gitFlow: 'light', contracts: '.claude/contracts.json', ...over });
 
 const CHANGELOG = ['# 변경 이력', '사유 칸에 장치: 또는 장치 없음: 을 적는다.', '',
   '| 날짜 | 변경 | 사유 |', '| --- | --- | --- |', '| 2026-11-18 | 처음 구성 | 장치 없음: 첫 구성 |', ''].join('\n');
 
 let n = 0;
-function project(over = {}) {
+function project(over = {}, more = {}) {
+  over = { ...over, ...more };
   const root = join(tmp, 'p' + n++);
   const files = {
-    '.claude/harness.json': JSON.stringify({ frame: 'docs/harness/frame.md', orchestrator: '.claude/skills/orch/SKILL.md', changelog: 'docs/harness/CHANGELOG.md', gitFlow: 'light' }),
+    '.claude/harness.json': manifest(),
+    '.claude/contracts.json': JSON.stringify(CONTRACTS),
     'docs/harness/frame.md': FRAME,
     '.claude/skills/orch/SKILL.md': ORCH,
-    '.claude/agents/a.md': '---\nname: a\nmodel: sonnet\n---\n본문',
+    '.claude/agents/a.md': '---\nname: a\nmodel: sonnet\n---\n계약: write, review',
     '.claude/hooks/guard.mjs': '',
     '.claude/settings.json': JSON.stringify({ permissions: { deny: ['Read(.env)'] } }),
     'CLAUDE.md': '# 프로젝트\n\n## Git\n\n- PR로 합친다',
@@ -94,10 +117,10 @@ test('D5: 대상 없음, 장치 줄 없음', () => {
 test('D6: 항목 빠짐, 이유 없는 다른 값, full이면 전체 항목까지, none이면 검사 안 함', () => {
   assert.deepEqual(ids(check('design', project(frameWith('- 커밋 규칙: 기본', '')))), ['D6']);
   assert.deepEqual(ids(check('design', project(frameWith(' 이유: 브랜치가 적다', '')))), ['D6']);
-  const full = JSON.stringify({ frame: 'docs/harness/frame.md', orchestrator: '.claude/skills/orch/SKILL.md', changelog: 'docs/harness/CHANGELOG.md', gitFlow: 'full' });
+  const full = manifest({ gitFlow: 'full' });
   assert.ok(ids(check('design', project({ '.claude/harness.json': full }))).every((id) => id === 'D6'));
   assert.ok(check('design', project({ '.claude/harness.json': full })).length > 1);
-  const none = JSON.stringify({ frame: 'docs/harness/frame.md', orchestrator: '.claude/skills/orch/SKILL.md', changelog: 'docs/harness/CHANGELOG.md', gitFlow: 'none' });
+  const none = manifest({ gitFlow: 'none' });
   assert.deepEqual(check('build', project({ '.claude/harness.json': none, ...frameWith('- 커밋 규칙: 기본', ''), 'CLAUDE.md': '# x' })), []);
 });
 
@@ -151,7 +174,7 @@ test('E1: 표 이력에 더한 행', () => {
 
 test('E1: ADR 폴더의 새 파일(추적 안 된 파일 포함), 잘못된 기준', () => {
   const adr = { 'docs/harness/CHANGELOG.md': null, 'docs/harness/adr/README.md': '형식: 상태, 맥락, 결정, 장치:', 'docs/harness/adr/0001.md': '# 0001\n장치 없음: 첫 구성' };
-  const json = JSON.stringify({ frame: 'docs/harness/frame.md', orchestrator: '.claude/skills/orch/SKILL.md', changelog: 'docs/harness/adr', gitFlow: 'light' });
+  const json = manifest({ changelog: 'docs/harness/adr' });
   const root = gitProject({ ...adr, '.claude/harness.json': json });
   assert.deepEqual(check('evolve', root), []);
   writeFileSync(join(root, 'docs/harness/adr/0002.md'), '# 0002\n장치: tests/y.test.mjs');
@@ -164,4 +187,66 @@ test('E1: ADR 폴더의 새 파일(추적 안 된 파일 포함), 잘못된 기�
 test('E2: evolve는 B 검사를 포함하고 D 검사는 하지 않는다', () => {
   const root = gitProject({ '.claude/commands/x.md': 'x', ...frameWith('- 답: npm test', '') });
   assert.deepEqual(ids(check('evolve', root)), ['B7']);
+});
+
+test('C1: contracts 키·파일, 노드 칸, 출력이 writes 밖', () => {
+  assert.deepEqual(ids(check('build', project({ '.claude/harness.json': manifest({ contracts: undefined }) }))), ['C1']);
+  assert.deepEqual(ids(check('build', project({ '.claude/contracts.json': null }))), ['C1']);
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.write.kind = 'bot'; })))), ['C1']);
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { delete n.write.stop; })))), ['C1']);
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.review.inputs[0].required = 'yes'; })))), ['C1']);
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.write.outputs[0].check = ''; })))), ['C1']);
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.write.writes = ['src/**']; })))), ['C1']);
+  assert.deepEqual(check('design', project({ '.claude/contracts.json': null })), []);
+});
+
+test('C2: 에이전트·스킬 파일', () => {
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.write.agent = 'ghost'; })))), ['C2']);
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.write.skill = 'ghost'; })))), ['C2']);
+});
+
+test('C3: from이 없는 노드, 출력과 어긋난 경로', () => {
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.review.inputs[0].from = 'ghost'; })))), ['C3']);
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.review.inputs[0].path = 'out/<slug>.txt'; })))), ['C3']);
+});
+
+test('C4: 오케스트레이터·에이전트가 노드를 가리킴, 입력·출력 규칙 절', () => {
+  assert.deepEqual(ids(check('build', project({ '.claude/skills/orch/SKILL.md': ORCH.replace(' → review', '') }))), ['C4']);
+  assert.deepEqual(ids(check('build', project({ '.claude/agents/a.md': '---\nname: a\nmodel: sonnet\n---\n계약: write, review\n## 입력·출력 규칙\n- 입력: x' }))), ['C4']);
+  assert.deepEqual(ids(check('build', project({ '.claude/agents/a.md': '---\nname: a\nmodel: sonnet\n---\n계약: write' }))), ['C4']);
+});
+
+test('C5: parallel 노드의 writes 겹침', () => {
+  assert.deepEqual(check('build', project(contractsWith((n) => { n.write.parallel = ['review']; }))), []);
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.write.parallel = ['review']; n.review.writes.push('out/<x>.md'); })))), ['C5']);
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => { n.write.parallel = ['ghost']; })))), ['C5']);
+});
+
+test('C6: 사람 게이트 노드', () => {
+  assert.deepEqual(ids(check('build', project(contractsWith((n) => {
+    n.plan.kind = 'agent'; n.plan.agent = 'a'; n.plan.writes = ['docs/**']; n.plan.delegated = []; n.plan.stop = { contract: [], premise: [] };
+  }), { '.claude/agents/a.md': '---\nname: a\nmodel: sonnet\n---\n계약: plan, write, review' }))), ['C6']);
+});
+
+test('정보: 미정 출력 수', () => {
+  assert.equal(undecided(project()), 2);
+  assert.equal(undecided(project({ '.claude/contracts.json': null })), null);
+});
+
+test('N1·N2: 실행 전 표시 뒤 writes 밖 변경, 필수 출력, 형식 칸', () => {
+  const root = gitProject({ 'notes.md': '원래' });
+  writeFileSync(join(root, 'notes.md'), '표시 전에 고침');
+  const node = (vars) => ids(check('node', root, 'HEAD', { node: 'write', vars }));
+  assert.deepEqual(node(), ['N1']);
+  mark(root, 'write');
+  assert.deepEqual(node(), ['N2']);
+  mkdirSync(join(root, 'out'), { recursive: true });
+  writeFileSync(join(root, 'out/plant.md'), '# 제목\n본문');
+  assert.deepEqual(node(), ['N2']);
+  writeFileSync(join(root, 'out/plant.md'), '## 요약\n본문');
+  assert.deepEqual(node(), []);
+  assert.deepEqual(node({ slug: 'face' }), ['N2']);
+  writeFileSync(join(root, 'notes.md'), '실행 중에 또 고침');
+  assert.deepEqual(node(), ['N1']);
+  assert.deepEqual(ids(check('node', root, 'HEAD', { node: 'plan' })), ['N1']);
 });
